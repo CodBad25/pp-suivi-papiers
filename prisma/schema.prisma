@@ -1,0 +1,160 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  students   Student[]
+  documents  DocumentType[]
+  tasks      Task[]
+  reminders  Reminder[]
+  taskTypes  TaskType[]
+}
+
+model Student {
+  id        String   @id @default(cuid())
+  firstName String
+  lastName  String
+  gender    String   // "M" ou "F"
+  class     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  userId        String
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  documents     StudentDocument[]
+  dispensations Dispensation[]
+  tasks         Task[]
+  defaultTasks  StudentTask[]
+}
+
+model DocumentType {
+  id            String   @id @default(cuid())
+  name          String
+  description   String?
+  dueDate       DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  userId        String
+  user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  documents     StudentDocument[]
+  dispensations Dispensation[]
+
+  @@unique([name, userId])
+}
+
+model StudentDocument {
+  id        String   @id @default(cuid())
+  status    String   @default("pending") // "pending", "submitted", "late"
+  remarks   String?
+  submitted DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  studentId    String
+  student      Student       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  documentId   String
+  document     DocumentType  @relation(fields: [documentId], references: [id], onDelete: Cascade)
+}
+
+model Task {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  status      String   @default("todo") // "todo", "in_progress", "done"
+  priority    String   @default("medium") // "low", "medium", "high"
+  dueDate     DateTime?
+  comments    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  userId    String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  studentId String?
+  student   Student? @relation(fields: [studentId], references: [id], onDelete: SetNull)
+}
+
+// Catalogue de tâches par défaut
+model TaskType {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  dueDate     DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  userId   String
+  user     User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tasks    StudentTask[]
+
+  @@unique([name, userId])
+}
+
+// Instance d'une tâche par élève
+model StudentTask {
+  id          String   @id @default(cuid())
+  status      String   @default("todo") // "todo", "in_progress", "done"
+  exempted    Boolean  @default(false)
+  dueDate     DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  studentId String
+  student   Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  taskTypeId String
+  taskType   TaskType @relation(fields: [taskTypeId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, taskTypeId])
+}
+
+model Dispensation {
+  id        String   @id @default(cuid())
+  reason    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  studentId    String
+  student      Student        @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  documentId   String
+  document     DocumentType   @relation(fields: [documentId], references: [id], onDelete: Cascade)
+}
+
+model Reminder {
+  id        String   @id @default(cuid())
+  title     String
+  message   String
+  dueDate   DateTime
+  sent      Boolean  @default(false)
+  sentAt    DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
