@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
     
     // Nettoyer et valider l'encodage
     try {
-      const sanitizedData = sanitizeDataForDB({ name, description })
+      const sanitizedData = sanitizeDataForDB({ name, description }) as { name: string; description: string }
       validateEncodingBeforeInsert(sanitizedData)
       name = sanitizedData.name
       description = sanitizedData.description
@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
       console.error('Erreur d\'encodage:', encodingError)
       return NextResponse.json({ 
         error: 'Problème d\'encodage détecté. Vérifiez les caractères spéciaux.',
-        details: encodingError.message 
+        details: encodingError instanceof Error ? encodingError.message : String(encodingError)
       }, { status: 400 })
     }
 
@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
       
       // Nettoyer et valider l'encodage pour le fallback aussi
       try {
-        const sanitizedData = sanitizeDataForDB({ name, description })
+        const sanitizedData = sanitizeDataForDB({ name, description }) as { name: string; description: string }
         validateEncodingBeforeInsert(sanitizedData)
         name = sanitizedData.name
         description = sanitizedData.description
@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
         console.error('Erreur d\'encodage (fallback):', encodingError)
         return NextResponse.json({ 
           error: 'Problème d\'encodage détecté. Vérifiez les caractères spéciaux.',
-          details: encodingError.message 
+          details: encodingError instanceof Error ? encodingError.message : String(encodingError)
         }, { status: 400 })
       }
       const fp = filePath()

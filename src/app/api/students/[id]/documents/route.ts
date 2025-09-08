@@ -5,12 +5,13 @@ const prisma = new PrismaClient();
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const resolvedParams = await params;
   try {
     const body = await request.json();
     const { documentId, status } = body;
-    const studentId = params.id;
+    const studentId = resolvedParams.id;
 
     // Vérifier si le document existe déjà pour cet étudiant
     let studentDocument = await prisma.studentDocument.findFirst({

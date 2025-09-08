@@ -1625,11 +1625,11 @@ export default function Home() {
                             marginTop: '0.25rem'
                           }}
                           onMouseEnter={(e) => {
-                            const btn = e.currentTarget.querySelector('.remarks-btn');
+                            const btn = e.currentTarget.querySelector('.remarks-btn') as HTMLElement;
                             if (btn) btn.style.opacity = '1';
                           }}
                           onMouseLeave={(e) => {
-                            const btn = e.currentTarget.querySelector('.remarks-btn');
+                            const btn = e.currentTarget.querySelector('.remarks-btn') as HTMLElement;
                             if (btn) btn.style.opacity = '0';
                           }}
                         >

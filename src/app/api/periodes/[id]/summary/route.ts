@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
+import fs from 'fs';
+import path from 'path';
 
 const prisma = new PrismaClient();
 
@@ -11,10 +13,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const classes = classesParam.split(',').map(s => s.trim()).filter(Boolean);
     if (classes.length === 0) return NextResponse.json({ error: 'classes requis (comma separated)' }, { status: 400 });
 
-    const periode = await prisma.periode.findUnique({
-      where: { id: id },
-      include: { taskTypes: true, documentTypes: true },
-    });
+    // Fallback to JSON file since periode model doesn't exist in schema
+    const periodesFile = path.join(process.cwd(), 'prisma', 'db', 'periodes.json');
+    const periodes = fs.existsSync(periodesFile) ? JSON.parse(fs.readFileSync(periodesFile, 'utf8')) : [];
+    const periode = periodes.find((p: any) => p.id === id);
     if (!periode) return NextResponse.json({ error: 'Période introuvable' }, { status: 404 });
 
     const students = await prisma.student.findMany({ where: { class: { in: classes } }, select: { id: true } });
@@ -25,7 +27,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     let missingDocs = 0;
 
     // Tasks: count missing and dueDate updates
-    for (const ptt of periode.taskTypes) {
+    for (const ptt of (periode.taskTypes || [])) {
       if (studentIds.length === 0) break;
       // Existing tasks for these students and this type
       const existing = await prisma.studentTask.findMany({
@@ -41,7 +43,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     }
 
     // Documents: count missing instances
-    for (const pdt of periode.documentTypes) {
+    for (const pdt of (periode.documentTypes || [])) {
       if (studentIds.length === 0) break;
       const existing = await prisma.studentDocument.findMany({
         where: { studentId: { in: studentIds }, documentId: pdt.documentTypeId },

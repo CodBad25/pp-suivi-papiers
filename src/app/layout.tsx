@@ -7,7 +7,6 @@ const inter = Inter({ subsets: ['latin', 'latin-ext'] })
 export const metadata: Metadata = {
   title: 'Suivi Administratif',
   description: 'Application de suivi administratif pour les élèves',
-  charset: 'utf-8',
 }
 
 export const viewport: Viewport = {

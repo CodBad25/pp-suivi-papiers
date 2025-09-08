@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
   
   // Nettoyer et valider l'encodage
   try {
-    const sanitizedData = sanitizeDataForDB({ name, description })
+    const sanitizedData = sanitizeDataForDB({ name, description }) as { name: string; description?: string }
     validateEncodingBeforeInsert(sanitizedData)
     name = sanitizedData.name
     description = sanitizedData.description
@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
     console.error('Erreur d\'encodage:', encodingError)
     return NextResponse.json({ 
       error: 'Problème d\'encodage détecté. Vérifiez les caractères spéciaux.',
-      details: encodingError.message 
+      details: (encodingError as Error)?.message || String(encodingError)
     }, { status: 400 })
   }
   try {

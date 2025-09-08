@@ -8,22 +8,16 @@ const prisma = new PrismaClient();
 
 export async function GET() {
   try {
-    const user = await prisma.user.findFirst();
-    const periodes = await prisma.periode.findMany({
-      where: user ? { userId: user.id } : undefined,
-      orderBy: { createdAt: 'desc' },
-      include: { taskTypes: { include: { taskType: true } }, documentTypes: { include: { documentType: true } } }
-    });
-    return NextResponse.json(periodes);
+    // Fallback to JSON file since periode model doesn't exist in schema
+    const dir = path.join(process.cwd(), 'prisma', 'db');
+    const file = path.join(dir, 'periodes.json');
+    if (fs.existsSync(file)) {
+      const data = JSON.parse(fs.readFileSync(file, 'utf8'));
+      return NextResponse.json(Array.isArray(data) ? data : []);
+    }
+    return NextResponse.json([]);
   } catch (e) {
-    try {
-      const dir = path.join(process.cwd(), 'prisma', 'db');
-      const file = path.join(dir, 'periodes.json');
-      if (fs.existsSync(file)) {
-        const data = JSON.parse(fs.readFileSync(file, 'utf8'));
-        return NextResponse.json(Array.isArray(data) ? data : []);
-      }
-    } catch {}
+    console.error(e);
     return NextResponse.json([]);
   }
 }
@@ -33,17 +27,24 @@ export async function POST(req: NextRequest) {
   const { name, description, startDate, endDate } = (body || {}) as any;
   if (!name) return NextResponse.json({ error: 'Nom requis' }, { status: 400 });
   try {
-    let user = await prisma.user.findFirst();
-    if (!user) user = await prisma.user.create({ data: { email: 'professeur@example.com', name: 'Professeur Principal' } });
-    const created = await prisma.periode.create({
-      data: {
-        name,
-        description,
-        startDate: startDate ? new Date(startDate) : null,
-        endDate: endDate ? new Date(endDate) : null,
-        userId: user.id,
-      }
-    });
+    // Fallback to JSON file since periode model doesn't exist in schema
+    const dir = path.join(process.cwd(), 'prisma', 'db');
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    const file = path.join(dir, 'periodes.json');
+    const list = fs.existsSync(file) ? (JSON.parse(fs.readFileSync(file, 'utf8')) || []) : [];
+    const created = {
+      id: randomUUID(),
+      name,
+      description: description || null,
+      startDate: startDate || null,
+      endDate: endDate || null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      taskTypes: [],
+      documentTypes: []
+    };
+    list.unshift(created);
+    fs.writeFileSync(file, JSON.stringify(list, null, 2), 'utf8');
     return NextResponse.json(created, { status: 201 });
   } catch (e) {
     const msg = String((e as Error)?.message || e);
