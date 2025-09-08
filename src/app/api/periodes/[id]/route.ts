@@ -5,9 +5,10 @@ import path from 'path';
 
 const prisma = new PrismaClient();
 
-export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   try {
-    const p = await prisma.periode.findUnique({ where: { id: params.id }, include: { taskTypes: { include: { taskType: true } }, documentTypes: { include: { documentType: true } } } });
+    const p = await prisma.periode.findUnique({ where: { id: id }, include: { taskTypes: { include: { taskType: true } }, documentTypes: { include: { documentType: true } } } });
     if (!p) return NextResponse.json({ error: 'Introuvable' }, { status: 404 });
     return NextResponse.json(p);
   } catch (e) {
@@ -15,7 +16,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     try {
       const file = path.join(process.cwd(), 'prisma', 'db', 'periodes.json');
       const list = fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : [];
-      const found = list.find((x: any) => x.id === params.id);
+      const found = list.find((x: any) => x.id === id);
       if (!found) return NextResponse.json({ error: 'Introuvable' }, { status: 404 });
       return NextResponse.json(found);
     } catch (w) {
@@ -25,12 +26,13 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   }
 }
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   try {
     const body = await req.json();
     const { name, description, startDate, endDate } = body || {};
     const p = await prisma.periode.update({
-      where: { id: params.id },
+      where: { id: id },
       data: {
         name,
         description,
@@ -45,9 +47,10 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   }
 }
 
-export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   try {
-    await prisma.periode.delete({ where: { id: params.id } });
+    await prisma.periode.delete({ where: { id: id } });
     return NextResponse.json({ ok: true });
   } catch (e) {
     console.error(e);

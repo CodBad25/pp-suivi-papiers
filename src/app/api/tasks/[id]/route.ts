@@ -4,9 +4,9 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 // PATCH /api/tasks/[id]
-export async function PATCH(_req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   try {
-    const id = params.id;
     const body = await _req.json();
     const { title, description, status, priority, dueDate, studentId } = body || {};
 
@@ -30,9 +30,9 @@ export async function PATCH(_req: NextRequest, { params }: { params: { id: strin
 }
 
 // DELETE /api/tasks/[id]
-export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   try {
-    const id = params.id;
     await prisma.task.delete({ where: { id } });
     return NextResponse.json({ ok: true });
   } catch (error) {

@@ -5,9 +5,9 @@ const prisma = new PrismaClient();
 
 // PATCH /api/student-tasks/[id]
 // Body can include: { status?: 'todo'|'in_progress'|'done', exempted?: boolean, dueDate?: string|null }
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   try {
-    const id = params.id;
     const body = await req.json();
     const { status, exempted, dueDate } = body || {};
     const updated = await prisma.studentTask.update({
@@ -27,9 +27,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 }
 
 // DELETE /api/student-tasks/[id]
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   try {
-    const id = params.id;
     await prisma.studentTask.delete({
       where: { id }
     });

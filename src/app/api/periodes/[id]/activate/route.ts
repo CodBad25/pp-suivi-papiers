@@ -3,7 +3,8 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   try {
     const body = await req.json();
     const classes: string[] = body?.classes || [];
@@ -17,7 +18,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     }
 
     const periode = await prisma.periode.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: { taskTypes: true, documentTypes: true }
     });
     if (!periode) return NextResponse.json({ error: 'Période introuvable' }, { status: 404 });

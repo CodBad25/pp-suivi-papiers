@@ -3,7 +3,8 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   try {
     const { searchParams } = new URL(req.url);
     const classesParam = searchParams.get('classes') || '';
@@ -11,7 +12,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     if (classes.length === 0) return NextResponse.json({ error: 'classes requis (comma separated)' }, { status: 400 });
 
     const periode = await prisma.periode.findUnique({
-      where: { id: params.id },
+      where: { id: id },
       include: { taskTypes: true, documentTypes: true },
     });
     if (!periode) return NextResponse.json({ error: 'Période introuvable' }, { status: 404 });

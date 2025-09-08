@@ -6,14 +6,15 @@ import path from 'path';
 const prisma = new PrismaClient();
 
 // POST { documentTypeId, dueDate? }
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   try {
     const { documentTypeId, dueDate } = await req.json();
     if (!documentTypeId) return NextResponse.json({ error: 'documentTypeId requis' }, { status: 400 });
     const created = await prisma.periodeDocumentType.upsert({
-      where: { periodeId_documentTypeId: { periodeId: params.id, documentTypeId } },
+      where: { periodeId_documentTypeId: { periodeId: id, documentTypeId } },
       update: { dueDate: dueDate ? new Date(dueDate) : null },
-      create: { periodeId: params.id, documentTypeId, dueDate: dueDate ? new Date(dueDate) : null }
+      create: { periodeId: id, documentTypeId, dueDate: dueDate ? new Date(dueDate) : null }
     });
     return NextResponse.json(created, { status: 201 });
   } catch (e) {
@@ -27,7 +28,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         const dueDate = body?.dueDate || null;
         if (!documentTypeId) return NextResponse.json({ error: 'documentTypeId requis' }, { status: 400 });
         const list = fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : [];
-        const idx = list.findIndex((p: any) => p.id === params.id);
+        const idx = list.findIndex((p: any) => p.id === id);
         if (idx === -1) return NextResponse.json({ error: 'Période introuvable' }, { status: 404 });
         const p = list[idx];
         p.documentTypes = Array.isArray(p.documentTypes) ? p.documentTypes : [];
@@ -46,12 +47,13 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 }
 
 // DELETE ?documentTypeId=...
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   try {
     const { searchParams } = new URL(req.url);
     const documentTypeId = searchParams.get('documentTypeId');
     if (!documentTypeId) return NextResponse.json({ error: 'documentTypeId requis' }, { status: 400 });
-    await prisma.periodeDocumentType.delete({ where: { periodeId_documentTypeId: { periodeId: params.id, documentTypeId } } });
+    await prisma.periodeDocumentType.delete({ where: { periodeId_documentTypeId: { periodeId: id, documentTypeId } } });
     return NextResponse.json({ ok: true });
   } catch (e) {
     const msg = String((e as Error)?.message || e);
