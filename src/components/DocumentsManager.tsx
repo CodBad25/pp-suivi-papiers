@@ -334,8 +334,8 @@ export default function DocumentsManager({
                       {editingDoc?.id === doc.id ? (
                         <div style={{ display: 'flex', flex: 1, gap: 8, alignItems: 'center' }}>
                           <input
-                            value={editingDoc.name}
-                            onChange={(e) => setEditingDoc({...editingDoc, name: e.target.value})}
+                            value={editingDoc?.name || ''}
+                            onChange={(e) => editingDoc && setEditingDoc({...editingDoc, name: e.target.value})}
                             style={{
                               flex: 1,
                               height: 32,
