@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import { sanitizeDataForDB, validateEncodingBeforeInsert } from '@/lib/encoding-utils';
+import { db } from '@/lib/db';
 
-const prisma = new PrismaClient();
+const prisma = db;
 
 // GET /api/tasks?studentId=...
 export async function GET(request: NextRequest) {

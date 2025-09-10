@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { useRouter } from 'next/navigation';
 
 interface Student {
   id: string;
@@ -71,6 +72,8 @@ export default function Home() {
   const [newTask, setNewTask] = useState({ title: '', description: '', priority: 'medium' as 'low' | 'medium' | 'high', dueDate: '' });
   const [newDocument, setNewDocument] = useState({ name: '', description: '', dueDate: '' });
   const [showRemarks, setShowRemarks] = useState<{[key: string]: boolean}>({});
+
+  const router = useRouter();
 
   // Charger les données au démarrage
   useEffect(() => {
@@ -640,7 +643,7 @@ export default function Home() {
                 📁 Importer
               </button>
               <button
-                onClick={() => setShowCreateTaskModal(true)}
+                onClick={() => router.push('/tasks')}
                 style={{
                   background: '#10b981',
                   color: 'white',
@@ -655,10 +658,10 @@ export default function Home() {
                   gap: '0.25rem'
                 }}
               >
-                ✅ Nouvelle tâche
+                ✅ Gérer les tâches
               </button>
               <button
-                onClick={() => setShowCreateDocumentModal(true)}
+                onClick={() => router.push('/documents')}
                 style={{
                   background: '#8b5cf6',
                   color: 'white',
@@ -673,7 +676,7 @@ export default function Home() {
                   gap: '0.25rem'
                 }}
               >
-                📄 Nouveau document
+                📄 Gérer les documents
               </button>
               <button
                 onClick={async () => {
@@ -1136,21 +1139,29 @@ export default function Home() {
                           <button
                             onClick={async (e) => {
                               e.stopPropagation();
-                              const studentTasks = tasksByStudent[student.id] || [];
-                              for (const task of studentTasks) {
-                                if (task.status !== 'done') {
-                                  try {
-                                    await fetch(`/api/student-tasks/${task.id}`, {
-                                      method: 'PATCH',
-                                      headers: { 'Content-Type': 'application/json' },
-                                      body: JSON.stringify({ status: 'done' })
-                                    });
-                                  } catch (error) {
-                                    console.error('Erreur:', error);
-                                  }
-                                }
+                              const prevTasks = tasksByStudent[student.id] || [];
+                              // Optimistic UI: marquer toutes les tâches non exemptées comme faites
+                              const updated = (prevTasks || []).map((t: any) => t?.exempted ? t : (t.status === 'done' ? t : { ...t, status: 'done' }));
+                              setTasksByStudent(prev => ({ ...prev, [student.id]: updated }));
+                              // Mettre à jour immédiatement la barre (taskCounts)
+                              const visibleNow = updated.filter((t: any) => !t.exempted);
+                              const doneNow = visibleNow.filter((t: any) => t.status === 'done').length;
+                              setTaskCounts(prev => ({ ...prev, [student.id]: { done: doneNow, total: visibleNow.length } }));
+                              try {
+                                const res = await fetch('/api/student-tasks', {
+                                  method: 'PATCH',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ studentId: student.id, action: 'all_done' })
+                                });
+                                if (!res.ok) throw new Error('Bulk update failed');
+                              } catch (error) {
+                                console.error('Erreur:', error);
+                                // Rollback si échec
+                                setTasksByStudent(prev => ({ ...prev, [student.id]: prevTasks }));
+                                const visible = (prevTasks || []).filter((t: any) => !t.exempted);
+                                const done = visible.filter((t: any) => t.status === 'done').length;
+                                setTaskCounts(prev => ({ ...prev, [student.id]: { done, total: visible.length } }));
                               }
-                              await loadTasksForStudent(student.id);
                             }}
                             style={(() => {
                               const c = taskCounts[student.id] || { done: 0, total: 0 };
@@ -1243,16 +1254,31 @@ export default function Home() {
                                 key={task.id}
                                 onClick={async (e) => {
                                   e.stopPropagation();
+                                  const oldStatus = task.status;
                                   const newStatus = cycleTaskStatus(task.status);
+                                  // Optimistic UI update
+                                  const prevArr = tasksByStudent[student.id] || [];
+                                  const updated = prevArr.map((t: any) => t.id === task.id ? { ...t, status: newStatus } : t);
+                                  setTasksByStudent(prev => ({ ...prev, [student.id]: updated }));
+                                  // Mettre à jour immédiatement la barre (taskCounts)
+                                  const visibleNow = updated.filter((t: any) => !t.exempted);
+                                  const doneNow = visibleNow.filter((t: any) => t.status === 'done').length;
+                                  setTaskCounts(prev => ({ ...prev, [student.id]: { done: doneNow, total: visibleNow.length } }));
                                   try {
-                                    await fetch(`/api/student-tasks/${task.id}`, {
+                                    const res = await fetch(`/api/student-tasks/${task.id}`, {
                                       method: 'PATCH',
                                       headers: { 'Content-Type': 'application/json' },
                                       body: JSON.stringify({ status: newStatus })
                                     });
-                                    await loadTasksForStudent(student.id);
+                                    if (!res.ok) throw new Error('Mise à jour de la tâche échouée');
                                   } catch (error) {
                                     console.error('Erreur lors de la mise à jour de la tâche:', error);
+                                    // Rollback si échec
+                                    const rolled = prevArr.map((t: any) => t.id === task.id ? { ...t, status: oldStatus } : t);
+                                    setTasksByStudent(prev => ({ ...prev, [student.id]: rolled }));
+                                    const visible = rolled.filter((t: any) => !t.exempted);
+                                    const done = visible.filter((t: any) => t.status === 'done').length;
+                                    setTaskCounts(prev => ({ ...prev, [student.id]: { done, total: visible.length } }));
                                   }
                                 }}
                                 style={{
@@ -1924,7 +1950,7 @@ export default function Home() {
       )}
 
       {/* Modale de création de tâche */}
-      {showCreateTaskModal && (
+      {false && (
         <div style={{
           position: 'fixed',
           top: 0,
@@ -2126,7 +2152,7 @@ export default function Home() {
       )}
 
       {/* Modale de création de document */}
-      {showCreateDocumentModal && (
+      {false && (
         <div style={{
           position: 'fixed',
           top: 0,

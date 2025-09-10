@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
 import { parse } from 'csv-parse/sync';
 import fs from 'fs';
 import path from 'path';
-
-const prisma = new PrismaClient();
 
 export async function POST(request: NextRequest) {
   try {
@@ -75,8 +72,20 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Tentative de persistance DB
+    // Tentative de persistance DB (lazy-load Prisma)
     try {
+      let prisma: any = null;
+      try {
+        const { PrismaClient } = await import('@prisma/client');
+        const g = globalThis as any;
+        prisma = g.__prisma || new PrismaClient();
+        g.__prisma = prisma;
+      } catch (e) {
+        prisma = null;
+      }
+
+      if (!prisma) throw new Error('PRISMA_UNAVAILABLE');
+
       let user = await prisma.user.findFirst();
       if (!user) {
         user = await prisma.user.create({ data: { email: 'professeur@example.com', name: 'Professeur Principal' } });
@@ -85,7 +94,8 @@ export async function POST(request: NextRequest) {
       const allStudents = await prisma.student.findMany({ where: { userId: user.id }, select: { id: true } });
       const taskTypes = await prisma.taskType.findMany({ where: { userId: user.id } });
       for (const s of allStudents) {
-        for (const tt of taskTypes) { try { await prisma.studentTask.create({ data: { studentId: s.id, taskTypeId: tt.id } }); } catch {} }
+        for (const tt of taskTypes) { try { await prisma.studentTask.create({ data: { studentId: s.id, taskTypeId: tt.id } }); } catch {}
+        }
       }
       return NextResponse.json({
         message: `${createdStudents.count} élèves importés avec succès`,
@@ -98,7 +108,7 @@ export async function POST(request: NextRequest) {
         }
       });
     } catch (dbErr) {
-      // Fallback: Ã©crire le CSV importÃ© pour que GET /api/students le serve
+      // Fallback: écrire le CSV importé pour que GET /api/students le serve
       try {
         const dir = path.join(process.cwd(), 'prisma', 'db');
         if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });

@@ -5,8 +5,6 @@ import path from 'path'
 import { randomUUID } from 'crypto'
 import { sanitizeDataForDB, validateEncodingBeforeInsert } from '@/lib/encoding-utils'
 
-const prisma = new PrismaClient()
-
 const defaultDocs = [
   { id: 'd1', name: 'Fiche de renseignements', description: "Fiche administrative de début d'année", dueDate: null },
   { id: 'd2', name: 'Evasco', description: 'Évaluation scolaire', dueDate: null },
@@ -19,8 +17,12 @@ const filePath = () => path.join(process.cwd(), 'prisma', 'db', 'document-types.
 
 export async function GET() {
   try {
-    const docs = await prisma.documentType.findMany()
-    if (docs && docs.length > 0) return NextResponse.json(docs)
+    const { db } = await import('@/lib/db').catch(() => ({ db: null as any }))
+    const prisma = db
+    if (prisma) {
+      const docs = await prisma.documentType.findMany()
+      if (docs && docs.length > 0) return NextResponse.json(docs)
+    }
   } catch {}
 
   try {
@@ -38,11 +40,11 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     let { name, description, dueDate } = body || {}
-    
+
     if (!name) {
       return NextResponse.json({ error: 'name requis' }, { status: 400 })
     }
-    
+
     // Nettoyer et valider l'encodage
     try {
       const sanitizedData = sanitizeDataForDB({ name, description }) as { name: string; description: string }
@@ -56,6 +58,10 @@ export async function POST(request: NextRequest) {
         details: encodingError instanceof Error ? encodingError.message : String(encodingError)
       }, { status: 400 })
     }
+
+    const { db } = await import('@/lib/db').catch(() => ({ db: null as any }))
+    if (!db) throw new Error('DB indisponible')
+    const prisma = db
 
     let user = await prisma.user.findFirst()
     if (!user) {
@@ -78,9 +84,9 @@ export async function POST(request: NextRequest) {
       let name = body?.name
       let description = body?.description ?? null
       const dueDate = body?.dueDate ?? null
-      
+
       if (!name) return NextResponse.json({ error: 'name requis' }, { status: 400 })
-      
+
       // Nettoyer et valider l'encodage pour le fallback aussi
       try {
         const sanitizedData = sanitizeDataForDB({ name, description }) as { name: string; description: string }

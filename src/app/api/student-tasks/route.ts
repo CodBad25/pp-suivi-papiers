@@ -1,11 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
 
-const prisma = new PrismaClient();
+// Prisma is lazy-loaded via getPrisma()
+
+// Lazy-load Prisma to avoid module-level failures when client isn't generated
+async function getPrisma() {
+  try {
+    const { PrismaClient } = await import('@prisma/client');
+    const g = globalThis as any;
+    if (!g.__prisma) g.__prisma = new PrismaClient();
+    return g.__prisma as any;
+  } catch {
+    return null;
+  }
+}
 
 // GET /api/student-tasks?studentId=...
 export async function GET(request: NextRequest) {
   try {
+    const prisma = await getPrisma();
+    if (!prisma) {
+      // Fallback: aucune tâche si la DB n'est pas accessible
+      return NextResponse.json([]);
+    }
     const { searchParams } = new URL(request.url);
     const studentId = searchParams.get('studentId');
     if (!studentId) return NextResponse.json({ error: 'studentId requis' }, { status: 400 });
@@ -17,7 +33,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(tasks);
   } catch (e) {
     // Si la table n'existe pas encore (premier lancement), retourner une liste vide
-    const msg = String(e?.toString?.() || e);
+    const msg = String((e as any)?.toString?.() || e);
     if ((msg.includes('StudentTask') && msg.includes('does not exist')) || /unable to open the database file|no such table|SQLITE_ERROR/i.test(msg)) {
       return NextResponse.json([]);
     }
@@ -29,6 +45,10 @@ export async function GET(request: NextRequest) {
 // POST /api/student-tasks  { action: 'align' | 'create_single' }
 export async function POST(req: NextRequest) {
   try {
+    const prisma = await getPrisma();
+    if (!prisma) {
+      return NextResponse.json({ error: 'Base de données indisponible' }, { status: 503 });
+    }
     const { action, studentId, taskTypeId } = await req.json();
     
     if (action === 'create_single') {
@@ -85,6 +105,10 @@ export async function POST(req: NextRequest) {
 // Body: { studentId: string, action: 'all_in_progress' | 'all_done' }
 export async function PATCH(req: NextRequest) {
   try {
+    const prisma = await getPrisma();
+    if (!prisma) {
+      return NextResponse.json({ error: 'Base de données indisponible' }, { status: 503 });
+    }
     const { studentId, action } = await req.json();
     if (!studentId) return NextResponse.json({ error: 'studentId requis' }, { status: 400 });
     if (action !== 'all_in_progress' && action !== 'all_done') {

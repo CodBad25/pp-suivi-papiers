@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import fs from 'fs';
 import path from 'path';
+import { db } from '@/lib/db';
 
-const prisma = new PrismaClient();
+const prisma = db;
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -58,11 +59,46 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     const idx = list.findIndex((x: any) => x.id === id);
     if (idx === -1) return NextResponse.json({ error: 'Introuvable' }, { status: 404 });
     
+    const periode = list[idx];
+    
+    // Supprimer les tâches associées dans la base de données Prisma
+    if (periode.taskTypes && periode.taskTypes.length > 0) {
+      for (const taskType of periode.taskTypes) {
+        try {
+          // Supprimer toutes les tâches étudiantes de ce type pour cette période
+          await prisma.studentTask.deleteMany({
+            where: {
+              taskTypeId: taskType.taskTypeId,
+            }
+          });
+        } catch (taskError) {
+          console.log(`Tâches déjà supprimées ou inexistantes pour le type ${taskType.taskTypeId}`);
+        }
+      }
+    }
+    
+    // Supprimer les documents associés dans la base de données Prisma
+    if (periode.documentTypes && periode.documentTypes.length > 0) {
+      for (const docType of periode.documentTypes) {
+        try {
+          // Supprimer tous les documents étudiants de ce type pour cette période
+          await prisma.studentDocument.deleteMany({
+            where: {
+              documentId: docType.documentTypeId,
+            }
+          });
+        } catch (docError) {
+          console.log(`Documents déjà supprimés ou inexistants pour le type ${docType.documentTypeId}`);
+        }
+      }
+    }
+    
+    // Supprimer la période du fichier JSON
     list.splice(idx, 1);
     fs.writeFileSync(file, JSON.stringify(list, null, 2));
     return NextResponse.json({ ok: true });
   } catch (e) {
-    console.error(e);
+    console.error('Erreur lors de la suppression de la période:', e);
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
   }
 }

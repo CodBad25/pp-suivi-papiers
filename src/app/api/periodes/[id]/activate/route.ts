@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import fs from 'fs';
 import path from 'path';
+import { db } from '@/lib/db';
 
-const prisma = new PrismaClient();
+const prisma = db;
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -41,7 +42,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         }
       }
       for (const pdt of (periode.documentTypes || [])) {
-        const existing = await prisma.studentDocument.findMany({ where: { studentId: { in: studentIds }, documentId: pdt.documentTypeId }, select: { studentId: true } });
+        const existing = await prisma.studentDocument.findMany({ where: { studentId: { in: studentIds }, documentId: pdt.documentId }, select: { studentId: true } });
         const set = new Set(existing.map(e => e.studentId));
         for (const sid of studentIds) if (!set.has(sid)) createdDocs++;
       }

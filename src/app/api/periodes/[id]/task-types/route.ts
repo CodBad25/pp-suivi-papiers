@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import fs from 'fs';
 import path from 'path';
+import { db } from '@/lib/db';
 
-const prisma = new PrismaClient();
+const prisma = db;
 
 // POST { taskTypeId, dueDate? } to attach
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {

@@ -1,17 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
+import { db } from '@/lib/db';
 
-const prisma = new PrismaClient();
+const prisma = db;
 
 export async function PATCH(
-  request: NextRequest,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const resolvedParams = await params;
+  const { id: studentId } = resolvedParams;
   try {
     const body = await request.json();
     const { documentId, status } = body;
-    const studentId = resolvedParams.id;
 
     // Vérifier si le document existe déjà pour cet étudiant
     let studentDocument = await prisma.studentDocument.findFirst({

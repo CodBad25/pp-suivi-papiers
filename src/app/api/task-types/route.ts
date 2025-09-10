@@ -4,8 +4,9 @@ import fs from 'fs'
 import path from 'path'
 import { randomUUID } from 'crypto'
 import { sanitizeDataForDB, validateEncodingBeforeInsert } from '@/lib/encoding-utils'
+import { db } from '@/lib/db';
 
-const prisma = new PrismaClient()
+const prisma = db
 const filePath = () => path.join(process.cwd(), 'prisma', 'db', 'task-types.json')
 
 export async function GET() {
