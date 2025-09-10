@@ -679,6 +679,35 @@ export default function Home() {
                 📄 Gérer les documents
               </button>
               <button
+                onClick={() => router.push('/manage')}
+                style={{
+                  background: '#f59e0b',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '0.375rem',
+                  padding: '0.5rem 0.75rem',
+                  fontSize: '0.875rem',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.25rem',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = '#d97706';
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                  e.currentTarget.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.15)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = '#f59e0b';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = 'none';
+                }}
+              >
+                🛠️ Gestion des documents et tâches
+              </button>
+              <button
                 onClick={async () => {
                   const header = ['Eleve','Classe','Tache','Etat','Echeance','Dispense'];
                   const rows: string[] = [];
