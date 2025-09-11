@@ -348,7 +348,7 @@ export default function DocumentsManager({
                             autoFocus
                             onKeyDown={(e) => {
                               if (e.key === 'Enter') {
-                                if (editingDoc?.name?.trim() && editingDoc.name.trim() !== doc.name) {
+                                if (editingDoc?.name?.trim() && editingDoc?.name.trim() !== doc.name) {
                                   updateDocument(doc.id, editingDoc.name);
                                 }
                                 setEditingDoc(null);
