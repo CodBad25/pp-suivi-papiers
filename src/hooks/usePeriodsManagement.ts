@@ -13,7 +13,7 @@ interface UsePeriodsManagementReturn {
   loading: boolean;
   error: string | null;
   setSelectedPeriode: (periode: Periode | null) => void;
-  loadPeriodes: () => Promise<void>;
+  loadPeriodes: () => Promise<Periode[]>;
   createPeriode: (name: string) => Promise<boolean>;
   updatePeriode: (id: string, name: string) => Promise<boolean>;
   deletePeriode: (id: string) => Promise<boolean>;

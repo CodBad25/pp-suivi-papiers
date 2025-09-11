@@ -101,6 +101,31 @@ export async function POST(req: NextRequest) {
   }
 }
 
+// DELETE /api/student-tasks { studentId: string }
+export async function DELETE(req: NextRequest) {
+  try {
+    const prisma = await getPrisma();
+    if (!prisma) {
+      return NextResponse.json({ error: 'Base de données indisponible' }, { status: 503 });
+    }
+    const body = await req.json();
+    const { studentId } = body;
+    if (!studentId) {
+      return NextResponse.json({ error: 'studentId requis' }, { status: 400 });
+    }
+    
+    // Supprimer toutes les tâches de l'étudiant
+    const result = await prisma.studentTask.deleteMany({
+      where: { studentId }
+    });
+    
+    return NextResponse.json({ deleted: result.count });
+  } catch (e) {
+    console.error(e);
+    return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
+  }
+}
+
 // PATCH /api/student-tasks  bulk status update
 // Body: { studentId: string, action: 'all_in_progress' | 'all_done' }
 export async function PATCH(req: NextRequest) {
@@ -111,10 +136,10 @@ export async function PATCH(req: NextRequest) {
     }
     const { studentId, action } = await req.json();
     if (!studentId) return NextResponse.json({ error: 'studentId requis' }, { status: 400 });
-    if (action !== 'all_in_progress' && action !== 'all_done') {
+    if (action !== 'all_in_progress' && action !== 'all_done' && action !== 'reset') {
       return NextResponse.json({ error: 'Action inconnue' }, { status: 400 });
     }
-    const status = action === 'all_in_progress' ? 'in_progress' : 'done';
+    const status = action === 'all_in_progress' ? 'in_progress' : action === 'all_done' ? 'done' : 'todo';
     const result = await prisma.studentTask.updateMany({
       where: { studentId, exempted: false },
       data: { status }

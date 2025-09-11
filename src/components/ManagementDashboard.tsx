@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import ConfirmationModal from './ConfirmationModal';
 
 interface DocumentType {
   id: string;
@@ -49,6 +50,15 @@ export default function ManagementDashboard() {
   const [editDocDueDate, setEditDocDueDate] = useState('');
   const [editTaskName, setEditTaskName] = useState('');
   const [editTaskDescription, setEditTaskDescription] = useState('');
+
+  // États pour les modals de confirmation
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    type?: 'danger' | 'warning' | 'info';
+  }>({ isOpen: false, title: '', message: '', onConfirm: () => {} });
 
   // Chargement des données
   useEffect(() => {
@@ -106,19 +116,26 @@ export default function ManagementDashboard() {
 
   // Suppression de document
   const deleteDocument = async (id: string) => {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer ce document ?')) return;
-    
-    try {
-      const response = await fetch(`/api/documents/${id}`, {
-        method: 'DELETE'
-      });
-      
-      if (response.ok) {
-        await loadData();
+    setConfirmModal({
+      isOpen: true,
+      title: 'Supprimer le document',
+      message: 'Êtes-vous sûr de vouloir supprimer ce document ? Cette action est irréversible.',
+      type: 'danger',
+      onConfirm: async () => {
+        try {
+          const response = await fetch(`/api/documents/${id}`, {
+            method: 'DELETE'
+          });
+          
+          if (response.ok) {
+            await loadData();
+          }
+        } catch (error) {
+          console.error('Erreur lors de la suppression:', error);
+        }
+        setConfirmModal({ isOpen: false, title: '', message: '', onConfirm: () => {} });
       }
-    } catch (error) {
-      console.error('Erreur lors de la suppression:', error);
-    }
+    });
   };
 
   // Édition de document
@@ -185,19 +202,26 @@ export default function ManagementDashboard() {
 
   // Suppression de tâche
   const deleteTask = async (id: string) => {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer cette tâche ?')) return;
-    
-    try {
-      const response = await fetch(`/api/task-types/${id}`, {
-        method: 'DELETE'
-      });
-      
-      if (response.ok) {
-        await loadData();
+    setConfirmModal({
+      isOpen: true,
+      title: 'Supprimer la tâche',
+      message: 'Êtes-vous sûr de vouloir supprimer cette tâche ? Cette action est irréversible.',
+      type: 'danger',
+      onConfirm: async () => {
+        try {
+          const response = await fetch(`/api/task-types/${id}`, {
+            method: 'DELETE'
+          });
+          
+          if (response.ok) {
+            await loadData();
+          }
+        } catch (error) {
+          console.error('Erreur lors de la suppression:', error);
+        }
+        setConfirmModal({ isOpen: false, title: '', message: '', onConfirm: () => {} });
       }
-    } catch (error) {
-      console.error('Erreur lors de la suppression:', error);
-    }
+    });
   };
 
   // Édition de tâche
@@ -290,22 +314,25 @@ export default function ManagementDashboard() {
   }
 
   return (
-    <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+    <div className="management-container" style={{ maxWidth: '1200px', margin: '0 auto' }}>
       {/* Onglets */}
-      <div style={{ display: 'flex', gap: '4px', marginBottom: '24px' }}>
+      <div className="management-tabs" style={{ display: 'flex', gap: '4px', marginBottom: '24px' }}>
         <button
+          className="management-tab"
           onClick={() => setActiveTab('documents')}
           style={tabStyle(activeTab === 'documents')}
         >
           📄 Documents ({documents.length})
         </button>
         <button
+          className="management-tab"
           onClick={() => setActiveTab('tasks')}
           style={tabStyle(activeTab === 'tasks')}
         >
           ✅ Tâches ({tasks.length})
         </button>
         <button
+          className="management-tab"
           onClick={() => setActiveTab('periods')}
           style={tabStyle(activeTab === 'periods')}
         >
@@ -314,7 +341,7 @@ export default function ManagementDashboard() {
       </div>
 
       {/* Contenu des onglets */}
-      <div style={{
+      <div className="management-content" style={{
         background: '#fff',
         border: '1px solid #e5e7eb',
         borderRadius: '0 8px 8px 8px',
@@ -328,11 +355,11 @@ export default function ManagementDashboard() {
             </h2>
             
             {/* Formulaire de création */}
-            <div style={cardStyle}>
+            <div className="management-form" style={cardStyle}>
               <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px', color: '#374151' }}>
                 Créer un nouveau document
               </h3>
-              <div style={{ display: 'grid', gap: '12px', gridTemplateColumns: '1fr 1fr auto' }}>
+              <div className="management-form-grid" style={{ display: 'grid', gap: '12px', gridTemplateColumns: '1fr 1fr auto' }}>
                 <input
                   type="text"
                   placeholder="Nom du document"
@@ -392,7 +419,7 @@ export default function ManagementDashboard() {
             </div>
 
             {/* Liste des documents */}
-            <div>
+            <div className="management-list">
               <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px', color: '#374151' }}>
                 Documents existants ({documents.length})
               </h3>
@@ -402,7 +429,7 @@ export default function ManagementDashboard() {
                 </div>
               ) : (
                 documents.map((doc) => (
-                  <div key={doc.id} style={{
+                  <div key={doc.id} className="management-item" style={{
                     ...cardStyle,
                     display: 'flex',
                     justifyContent: 'space-between',
@@ -483,7 +510,7 @@ export default function ManagementDashboard() {
                       </div>
                     )}
                     
-                    <div style={{ display: 'flex', gap: '8px' }}>
+                    <div className="management-item-actions" style={{ display: 'flex', gap: '8px' }}>
                       {editingDoc === doc.id ? (
                         // Boutons d'édition
                         <>
@@ -852,6 +879,16 @@ export default function ManagementDashboard() {
           </div>
         )}
       </div>
+      
+      {/* Modal de confirmation */}
+      <ConfirmationModal
+        isOpen={confirmModal.isOpen}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        type={confirmModal.type}
+        onConfirm={confirmModal.onConfirm}
+        onCancel={() => setConfirmModal({ isOpen: false, title: '', message: '', onConfirm: () => {} })}
+      />
     </div>
   );
 }

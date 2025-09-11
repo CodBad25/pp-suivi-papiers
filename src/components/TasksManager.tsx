@@ -37,15 +37,19 @@ export default function TasksManager({
   // Filtrer les tâches de la période sélectionnée
   const periodeTasks = useMemo(() => {
     if (!selectedPeriode) return [];
-    return (selectedPeriode.tasks || []).map((pt: any) => ({
-      id: pt.taskId,
-      name: pt.task?.name || 'Tâche sans nom',
-      description: pt.task?.description,
-      dueDate: pt.task?.dueDate,
-      priority: pt.task?.priority || 'medium',
-      status: pt.task?.status || 'pending'
-    }));
-  }, [selectedPeriode]);
+    return (selectedPeriode.tasks || []).map((pt: any) => {
+      // Trouver la tâche correspondante dans la liste des tâches
+      const task = tasks.find((t: any) => t.id === pt.taskTypeId);
+      return {
+        id: pt.taskTypeId,
+        name: task?.name || 'Tâche sans nom',
+        description: task?.description,
+        dueDate: task?.dueDate,
+        priority: task?.priority || 'medium',
+        status: task?.status || 'pending'
+      };
+    });
+  }, [selectedPeriode, tasks]);
 
   const periodeTaskIds = useMemo(() => 
     new Set(periodeTasks.map(t => t.id)), 
@@ -120,10 +124,10 @@ export default function TasksManager({
     if (!selectedPeriode) return;
     
     try {
-      const response = await fetch(`/api/periodes/${selectedPeriode.id}/tasks`, {
+      const response = await fetch(`/api/periodes/${selectedPeriode.id}/task-types`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ taskId })
+        body: JSON.stringify({ taskTypeId: taskId })
       });
       
       if (response.ok) {
@@ -138,7 +142,7 @@ export default function TasksManager({
     if (!selectedPeriode) return;
     
     try {
-      const response = await fetch(`/api/periodes/${selectedPeriode.id}/tasks/${taskId}`, {
+      const response = await fetch(`/api/periodes/${selectedPeriode.id}/task-types?taskTypeId=${taskId}`, {
         method: 'DELETE'
       });
       
@@ -317,8 +321,12 @@ export default function TasksManager({
                       {editingTask?.id === task.id ? (
                         <div style={{ display: 'flex', flex: 1, gap: 8, alignItems: 'center' }}>
                           <input
-                            value={editingTask.name}
-                            onChange={(e) => setEditingTask({...editingTask, name: e.target.value})}
+                            value={editingTask?.name || ''}
+                            onChange={(e) => {
+                              if (editingTask) {
+                                setEditingTask({ ...editingTask, name: e.target.value });
+                              }
+                            }}
                             style={{
                               flex: 1,
                               height: 32,
@@ -331,7 +339,7 @@ export default function TasksManager({
                             autoFocus
                             onKeyDown={(e) => {
                               if (e.key === 'Enter') {
-                                if (editingTask.name.trim() && editingTask.name.trim() !== task.name) {
+                                if (editingTask?.name.trim() && editingTask.name.trim() !== task.name) {
                                   updateTask(task.id, editingTask.name);
                                 }
                                 setEditingTask(null);
@@ -341,7 +349,7 @@ export default function TasksManager({
                           />
                           <button
                             onClick={() => {
-                              if (editingTask.name.trim() && editingTask.name.trim() !== task.name) {
+                              if (editingTask?.name.trim() && editingTask.name.trim() !== task.name) {
                                 updateTask(task.id, editingTask.name);
                               }
                               setEditingTask(null);

@@ -11,7 +11,7 @@ interface Periode {
 
 interface UnifiedPeriodManagerProps {
   selectedPeriode: Periode | null;
-  onPeriodeSelect: (periode: Periode) => void;
+  onPeriodeSelect: (periode: Periode | null) => void;
   onPeriodeChange: () => void;
   className?: string;
   style?: React.CSSProperties;

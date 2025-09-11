@@ -1,6 +1,7 @@
 "use client";
 
 import React from 'react';
+import { useTouchInteraction } from '../hooks/useTouchInteraction';
 
 type DocumentStatus = 'pending' | 'in-progress' | 'submitted';
 
@@ -8,12 +9,16 @@ interface ThreeStateButtonProps {
   status: DocumentStatus;
   onChange: (newStatus: DocumentStatus) => void;
   size?: 'small' | 'medium' | 'large';
+  taskName?: string;
+  taskDescription?: string;
 }
 
 export const ThreeStateButton: React.FC<ThreeStateButtonProps> = ({
   status,
   onChange,
-  size = 'medium'
+  size = 'medium',
+  taskName = 'Tâche',
+  taskDescription = 'Cliquez pour changer le statut de la tâche'
 }) => {
   const handleClick = () => {
     // Cycle through the states: pending -> in-progress -> submitted -> pending
@@ -29,6 +34,16 @@ export const ThreeStateButton: React.FC<ThreeStateButtonProps> = ({
         break;
     }
   };
+
+  const { touchProps, infoButtonProps } = useTouchInteraction({
+    data: {
+      title: taskName,
+      description: taskDescription,
+      status: status,
+      type: 'task'
+    },
+    onTap: handleClick
+  });
 
   const getButtonStyle = () => {
     const baseStyle = {
@@ -93,21 +108,51 @@ export const ThreeStateButton: React.FC<ThreeStateButtonProps> = ({
   };
 
   return (
-    <button
-      onClick={handleClick}
-      style={getButtonStyle()}
-      title={getTooltip()}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.transform = 'scale(1.1)';
-        e.currentTarget.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.15)';
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.transform = 'scale(1)';
-        e.currentTarget.style.boxShadow = 'none';
-      }}
-    >
-      {getIcon()}
-    </button>
+    <div style={{ display: 'flex', gap: '0.25rem', alignItems: 'center' }}>
+      <button
+        {...touchProps}
+        style={getButtonStyle()}
+        title={getTooltip()}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.transform = 'scale(1.1)';
+          e.currentTarget.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.15)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.transform = 'scale(1)';
+          e.currentTarget.style.boxShadow = 'none';
+        }}
+      >
+        {getIcon()}
+      </button>
+      <button
+        {...infoButtonProps}
+        style={{
+          width: size === 'small' ? '16px' : size === 'large' ? '24px' : '20px',
+          height: size === 'small' ? '16px' : size === 'large' ? '24px' : '20px',
+          borderRadius: '50%',
+          border: '1px solid #6b7280',
+          background: 'white',
+          color: '#6b7280',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: size === 'small' ? '0.625rem' : size === 'large' ? '0.875rem' : '0.75rem',
+          fontWeight: 'bold',
+          transition: 'all 0.2s ease'
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.background = '#6b7280';
+          e.currentTarget.style.color = 'white';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.background = 'white';
+          e.currentTarget.style.color = '#6b7280';
+        }}
+      >
+        ⓘ
+      </button>
+    </div>
   );
 };
 

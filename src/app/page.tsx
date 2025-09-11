@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from 'next/navigation';
+import ConfirmationModal from '../components/ConfirmationModal';
+import './responsive.css';
 
 interface Student {
   id: string;
@@ -63,15 +65,26 @@ export default function Home() {
   const [localDocumentStates, setLocalDocumentStates] = useState<{[key: string]: string}>({});
   const [statsUpdateTrigger, setStatsUpdateTrigger] = useState(0);
   const [tasksByStudent, setTasksByStudent] = useState<{[studentId: string]: TaskItem[]}>({});
-  const [newTaskTitle, setNewTaskTitle] = useState('');
+
   const [taskCounts, setTaskCounts] = useState<{[studentId: string]: { done: number; total: number }}>({});
   const [taskFilterStatus, setTaskFilterStatus] = useState<'all' | 'todo' | 'in_progress' | 'done'>('all');
-  const [taskSort, setTaskSort] = useState<'dueAsc' | 'dueDesc'>('dueAsc');
+
   const [showCreateTaskModal, setShowCreateTaskModal] = useState(false);
   const [showCreateDocumentModal, setShowCreateDocumentModal] = useState(false);
   const [newTask, setNewTask] = useState({ title: '', description: '', priority: 'medium' as 'low' | 'medium' | 'high', dueDate: '' });
   const [newDocument, setNewDocument] = useState({ name: '', description: '', dueDate: '' });
   const [showRemarks, setShowRemarks] = useState<{[key: string]: boolean}>({});
+  const [activeTab, setActiveTab] = useState<'documents' | 'tasks'>('documents');
+  const [notification, setNotification] = useState<{message: string, type: 'success' | 'error'} | null>(null);
+
+  // État pour le modal de confirmation
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    type?: 'danger' | 'warning' | 'info';
+  }>({ isOpen: false, title: '', message: '', onConfirm: () => {} });
 
   const router = useRouter();
 
@@ -79,6 +92,20 @@ export default function Home() {
   useEffect(() => {
     loadData();
   }, []);
+
+  // Gérer la classe modal-open du body
+  useEffect(() => {
+    if (isStudentDetailOpen) {
+      document.body.classList.add('modal-open');
+    } else {
+      document.body.classList.remove('modal-open');
+    }
+
+    // Cleanup au démontage du composant
+    return () => {
+      document.body.classList.remove('modal-open');
+    };
+  }, [isStudentDetailOpen]);
 
   const loadData = async () => {
     try {
@@ -193,18 +220,25 @@ export default function Home() {
   };
 
   const handleDeleteAllStudents = async () => {
-    if (confirm('Êtes-vous sûr de vouloir supprimer tous les élèves ?')) {
-      try {
-        const response = await fetch('/api/students', { method: 'DELETE' });
-        if (response.ok) {
-          setStudents([]);
-          console.log("Suppression réussie", "Tous les élèves ont été supprimés");
+    setConfirmModal({
+      isOpen: true,
+      title: 'Supprimer tous les élèves',
+      message: 'Êtes-vous sûr de vouloir supprimer tous les élèves ? Cette action est irréversible et supprimera également toutes leurs données associées.',
+      type: 'danger',
+      onConfirm: async () => {
+        try {
+          const response = await fetch('/api/students', { method: 'DELETE' });
+          if (response.ok) {
+            setStudents([]);
+            console.log("Suppression réussie", "Tous les élèves ont été supprimés");
+          }
+        } catch (error) {
+          console.error('Erreur lors de la suppression:', error);
+          console.error("Erreur de suppression", "Une erreur est survenue");
         }
-      } catch (error) {
-        console.error('Erreur lors de la suppression:', error);
-        console.error("Erreur de suppression", "Une erreur est survenue");
+        setConfirmModal({ isOpen: false, title: '', message: '', onConfirm: () => {} });
       }
-    }
+    });
   };
 
   const handleCreateTask = async () => {
@@ -543,20 +577,20 @@ export default function Home() {
       {showImportAnimation && <ImportAnimation />}
 
       {/* Header compact */}
-      <div style={{
+      <div className="header-container" style={{
         background: 'white',
         borderBottom: '1px solid #e2e8f0',
         padding: '0.75rem 1rem'
       }}>
         <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
-          <div style={{
+          <div className="header-content" style={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
             flexWrap: 'wrap',
             gap: '1rem'
           }}>
-            <div>
+            <div className="header-title">
               <h1 style={{
                 fontSize: '1.25rem',
                 fontWeight: 'bold',
@@ -574,48 +608,77 @@ export default function Home() {
               </p>
             </div>
 
-            {/* Stats compactes */}
+            {/* Stats améliorées - Plus grandes sur desktop, mieux organisées sur mobile */}
             {students.length > 0 && (
-              <div style={{
+              <div className="header-stats" style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '1.5rem'
+                gap: '1rem',
+                flexWrap: 'wrap',
+                justifyContent: 'center',
+                padding: '0.75rem 0'
               }}>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '1.125rem', fontWeight: 'bold', color: '#3b82f6' }}>
-                    {stats.totalStudents}
-                  </div>
-                  <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>Élèves</div>
+                <div className="stat-item" style={{ 
+                  display: 'flex', 
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '0.25rem',
+                  minWidth: '60px'
+                }}>
+                  <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#3b82f6' }}>{stats.totalStudents}</div>
+                  <div style={{ fontSize: '0.75rem', color: '#6b7280', textAlign: 'center' }}>👥 Élèves</div>
                 </div>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '1.125rem', fontWeight: 'bold', color: '#ef4444' }}>
-                    {stats.notSubmittedDocs}
-                  </div>
-                  <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>Non rendus</div>
+                <div style={{ color: '#d1d5db', fontSize: '1.5rem' }}>|</div>
+                <div className="stat-item" style={{ 
+                  display: 'flex', 
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '0.25rem',
+                  minWidth: '60px'
+                }}>
+                  <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#ef4444' }}>{stats.notSubmittedDocs}</div>
+                  <div style={{ fontSize: '0.75rem', color: '#6b7280', textAlign: 'center' }}>❌ Non remis</div>
                 </div>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '1.125rem', fontWeight: 'bold', color: '#f59e0b' }}>
-                    {stats.pendingDocs}
-                  </div>
-                  <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>En attente</div>
+                <div className="stat-item" style={{ 
+                  display: 'flex', 
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '0.25rem',
+                  minWidth: '60px'
+                }}>
+                  <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#f59e0b' }}>{stats.pendingDocs}</div>
+                  <div style={{ fontSize: '0.75rem', color: '#6b7280', textAlign: 'center' }}>⏳ En attente</div>
                 </div>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '1.125rem', fontWeight: 'bold', color: '#10b981' }}>
-                    {stats.submittedDocs}
-                  </div>
-                  <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>Rendus</div>
+                <div className="stat-item" style={{ 
+                  display: 'flex', 
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '0.25rem',
+                  minWidth: '60px'
+                }}>
+                  <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#10b981' }}>{stats.submittedDocs}</div>
+                  <div style={{ fontSize: '0.75rem', color: '#6b7280', textAlign: 'center' }}>✅ Validés</div>
                 </div>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '1.125rem', fontWeight: 'bold', color: '#8b5cf6' }}>
-                    {completionPercentage}%
-                  </div>
-                  <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>Complétion</div>
+                <div style={{ color: '#d1d5db', fontSize: '1.5rem' }}>|</div>
+                <div className="stat-item completion-stat" style={{ 
+                  display: 'flex', 
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '0.25rem',
+                  minWidth: '70px',
+                  padding: '0.5rem',
+                  backgroundColor: '#f8fafc',
+                  borderRadius: '0.5rem',
+                  border: '2px solid #e2e8f0'
+                }}>
+                  <div style={{ fontSize: '1.75rem', fontWeight: 'bold', color: '#8b5cf6' }}>{completionPercentage}%</div>
+                  <div style={{ fontSize: '0.75rem', color: '#6b7280', textAlign: 'center' }}>📊 Progression</div>
                 </div>
               </div>
             )}
 
             {/* Actions */}
-            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+            <div className="header-actions" style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
               <button
                 onClick={() => {
                   const input = document.createElement('input');
@@ -642,42 +705,7 @@ export default function Home() {
               >
                 📁 Importer
               </button>
-              <button
-                onClick={() => router.push('/tasks')}
-                style={{
-                  background: '#10b981',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '0.375rem',
-                  padding: '0.5rem 0.75rem',
-                  fontSize: '0.875rem',
-                  fontWeight: '500',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.25rem'
-                }}
-              >
-                ✅ Gérer les tâches
-              </button>
-              <button
-                onClick={() => router.push('/documents')}
-                style={{
-                  background: '#8b5cf6',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '0.375rem',
-                  padding: '0.5rem 0.75rem',
-                  fontSize: '0.875rem',
-                  fontWeight: '500',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.25rem'
-                }}
-              >
-                📄 Gérer les documents
-              </button>
+
               <button
                 onClick={() => router.push('/manage')}
                 style={{
@@ -848,7 +876,7 @@ export default function Home() {
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             {/* Barre de recherche compacte */}
-            <div style={{
+            <div className="search-container" style={{
               display: 'flex',
               alignItems: 'center',
               gap: '1rem',
@@ -860,6 +888,7 @@ export default function Home() {
                   placeholder="🔍 Rechercher un élève..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
+                  className="search-input"
                   style={{
                     width: '100%',
                     height: '2.25rem',
@@ -883,7 +912,7 @@ export default function Home() {
             </div>
 
             {/* Grille ultra-compacte des élèves */}
-            <div style={{
+            <div className="students-grid" style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
               gap: '0.5rem'
@@ -910,6 +939,7 @@ export default function Home() {
                 return (
                   <div
                     key={student.id}
+                    className="student-card hover-effect touch-target"
                     onClick={() => {
                       setSelectedStudent(student);
                       setIsStudentDetailOpen(true);
@@ -934,7 +964,7 @@ export default function Home() {
                     }}
                   >
                     {/* Header élève */}
-                    <div style={{
+                    <div className="student-header" style={{
                       display: 'flex',
                       alignItems: 'flex-start',
                       justifyContent: 'space-between',
@@ -943,19 +973,122 @@ export default function Home() {
                       <div style={{ minWidth: 0, flex: 1, textAlign: 'center' }}>
                         {/* NOM prénom et classe sur une seule ligne */}
                         <div style={{
-                          fontSize: '1.125rem',
-                          fontWeight: '700',
-                          color: student.gender === 'M' ? '#2563eb' : '#ec4899',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.5rem',
                           marginBottom: '0.5rem'
                         }}>
-                          {student.lastName.toUpperCase()} {student.firstName} - {student.class}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setConfirmModal({
+                                isOpen: true,
+                                title: 'Réinitialiser l\'élève',
+                                message: 'Êtes-vous sûr de vouloir remettre à zéro tous les documents et tâches de cet élève ? Cette action annulera tous les progrès enregistrés.',
+                                type: 'warning',
+                                onConfirm: async () => {
+                                  try {
+                                    // Réinitialiser l'état des documents
+                                    const docResponse = await fetch(`/api/students/${student.id}/documents`, {
+                                      method: 'PATCH',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({ action: 'reset' })
+                                    });
+                                    
+                                    // Réinitialiser l'état des tâches
+                                    const taskResponse = await fetch('/api/student-tasks', {
+                                      method: 'PATCH',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({ studentId: student.id, action: 'reset' })
+                                    });
+                                    
+                                    if (docResponse.ok && taskResponse.ok) {
+                                      // Recharger uniquement les données de cet étudiant
+                                      await loadTasksForStudent(student.id);
+                                      
+                                      // Recharger seulement cet étudiant depuis l'API
+                                      const studentResponse = await fetch(`/api/students`);
+                                      if (studentResponse.ok) {
+                                        const allStudents = await studentResponse.json();
+                                        const updatedStudent = allStudents.find((s: Student) => s.id === student.id);
+                                        if (updatedStudent) {
+                                          setStudents(prevStudents => 
+                                            prevStudents.map(s => s.id === student.id ? updatedStudent : s)
+                                          );
+                                        }
+                                      }
+                                      
+                                      setStatsUpdateTrigger(prev => prev + 1);
+                                      // Vider le cache local des états de documents pour cet étudiant
+                                      setLocalDocumentStates(prev => {
+                                        const newStates = { ...prev };
+                                        Object.keys(newStates).forEach(key => {
+                                          if (key.startsWith(`${student.id}-`)) {
+                                            delete newStates[key];
+                                          }
+                                        });
+                                        return newStates;
+                                      });
+                                      
+                                      // Afficher une confirmation discrète
+                                      setNotification({message: `✅ Réinitialisation terminée pour ${student.firstName} ${student.lastName}`, type: 'success'});
+                                      setTimeout(() => setNotification(null), 3000);
+                                    } else {
+                                      setNotification({message: '❌ Erreur lors de la réinitialisation', type: 'error'});
+                                      setTimeout(() => setNotification(null), 3000);
+                                    }
+                                  } catch (error) {
+                                    console.error('Erreur:', error);
+                                    setNotification({message: '❌ Erreur lors de la réinitialisation', type: 'error'});
+                                    setTimeout(() => setNotification(null), 3000);
+                                  }
+                                  setConfirmModal({ ...confirmModal, isOpen: false });
+                                }
+                              });
+                            }}
+                            style={{
+                              width: '1.5rem',
+                              height: '1.5rem',
+                              borderRadius: '0.25rem',
+                              border: '1px solid #f59e0b',
+                              background: 'white',
+                              color: '#f59e0b',
+                              fontSize: '0.75rem',
+                              fontWeight: '600',
+                              cursor: 'pointer',
+                              transition: 'all 0.15s ease',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              flexShrink: 0
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.background = '#f59e0b';
+                              e.currentTarget.style.color = 'white';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.background = 'white';
+                              e.currentTarget.style.color = '#f59e0b';
+                            }}
+                            title="Réinitialiser tous les documents et tâches de cet élève"
+                          >
+                            🔄
+                          </button>
+                          <div className="student-name" style={{
+                            fontSize: '1.125rem',
+                            fontWeight: '700',
+                            color: student.gender === 'M' ? '#2563eb' : '#ec4899',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            flex: 1
+                          }}>
+                            {student.lastName.toUpperCase()} {student.firstName} - {student.class}
+                          </div>
                         </div>
 
                       </div>
-                      <div style={{
+                      <div className="student-completion" style={{
                         fontSize: '1.125rem',
                         fontWeight: 'bold',
                         color: allCompleted ? '#ffffff' : completion === 100 ? '#10b981' : hasProgress ? '#f59e0b' : '#9ca3af'
@@ -1033,6 +1166,7 @@ export default function Home() {
                           >
                             ✓
                           </button>
+
                         </div>
                       </div>
                       <div style={{
@@ -1367,196 +1501,227 @@ export default function Home() {
 
       {/* Dialog de détail élève */}
       {isStudentDetailOpen && selectedStudent && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000,
-          padding: '1rem'
-        }}>
-          <div style={{
-            background: 'white',
-            borderRadius: '0.5rem',
-            maxWidth: '800px',
-            width: '100%',
-            maxHeight: '75vh',
-            display: 'flex',
-            flexDirection: 'column',
-            boxShadow: '0 20px 40px rgba(0, 0, 0, 0.1)'
-          }}>
+        <div 
+          className="student-detail-modal"
+          onClick={(e) => {
+            // Fermer la modale si on clique sur le fond
+            if (e.target === e.currentTarget) {
+              setIsStudentDetailOpen(false);
+            }
+          }}
+        >
+          <div className="student-detail-content">
             {/* Header */}
-            <div style={{
-              padding: '0.75rem 1.5rem',
-              borderBottom: '1px solid #e5e7eb',
-              flexShrink: 0
-            }}>
+            <div className="student-detail-header" style={{ position: 'relative' }}>
+              {/* Bouton de fermeture en haut à droite */}
+              <button
+                onClick={() => setIsStudentDetailOpen(false)}
+                style={{
+                  position: 'absolute',
+                  top: '0.5rem',
+                  right: '0.5rem',
+                  width: '2rem',
+                  height: '2rem',
+                  borderRadius: '50%',
+                  border: '1px solid #d1d5db',
+                  background: '#f9fafb',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '1rem',
+                  color: '#6b7280',
+                  zIndex: 1
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = '#f3f4f6';
+                  e.currentTarget.style.color = '#374151';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = '#f9fafb';
+                  e.currentTarget.style.color = '#6b7280';
+                }}
+              >
+                ✕
+              </button>
               <div style={{
                 display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
+                alignItems: 'flex-start',
+                justifyContent: 'space-between',
+                gap: '1rem',
                 marginBottom: '0.5rem'
               }}>
-                <span style={{ fontSize: '1.5rem' }}>
-                  {selectedStudent.gender === 'M' ? '👨' : '👩'}
-                </span>
-                <h2 style={{
-                  fontSize: '1.25rem',
-                  fontWeight: 'bold',
-                  margin: 0
-                }}>
-                  {selectedStudent.firstName} {selectedStudent.lastName}
-                </h2>
-                <span style={{
-                  padding: '0.25rem 0.5rem',
-                  background: '#f3f4f6',
-                  border: '1px solid #d1d5db',
+                <div>
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    marginBottom: '0.25rem'
+                  }}>
+                    <h2 style={{
+                      fontSize: '1.25rem',
+                      fontWeight: 'bold',
+                      margin: 0,
+                      color: selectedStudent.gender === 'M' ? '#2563eb' : '#ec4899'
+                    }}>
+                      {selectedStudent.firstName} {selectedStudent.lastName}
+                    </h2>
+                    <span style={{
+                      padding: '0.25rem 0.5rem',
+                      background: '#f3f4f6',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '0.375rem',
+                      fontSize: '0.75rem'
+                    }}>
+                      {selectedStudent.class}
+                    </span>
+                  </div>
+
+                </div>
+                
+                {/* Statistiques en haut à droite sur PC - compactes */}
+                <div style={{
+                  display: window.innerWidth > 768 ? 'flex' : 'none',
+                  alignItems: 'center',
+                  gap: '0.375rem',
+                  padding: '0.375rem 0.5rem',
+                  background: '#f8fafc',
                   borderRadius: '0.375rem',
                   fontSize: '0.75rem',
-                  marginLeft: '0.5rem'
+                  flexShrink: 0,
+                  marginRight: '2rem'
                 }}>
-                  {selectedStudent.class}
-                </span>
+                  <span style={{ color: '#3b82f6', fontWeight: 'bold' }}>📄 {documents.length}</span>
+                  <span style={{ color: '#d1d5db' }}>|</span>
+                  <span style={{ color: '#10b981', fontWeight: 'bold' }}>✅ {documents.filter(document => {
+                    const currentStatus = getDocumentStatus(selectedStudent.id, document.id, 'not-submitted');
+                    return currentStatus === 'submitted';
+                  }).length}</span>
+                  <span style={{ color: '#f59e0b', fontWeight: 'bold' }}>⏳ {documents.filter(document => {
+                    const currentStatus = getDocumentStatus(selectedStudent.id, document.id, 'not-submitted');
+                    return currentStatus === 'pending';
+                  }).length}</span>
+                  <span style={{ color: '#ef4444', fontWeight: 'bold' }}>❌ {documents.filter(document => {
+                    const currentStatus = getDocumentStatus(selectedStudent.id, document.id, 'not-submitted');
+                    return currentStatus === 'not-submitted';
+                  }).length}</span>
+                  <span style={{ color: '#d1d5db' }}>|</span>
+                  <span style={{ color: '#8b5cf6', fontWeight: 'bold' }}>📊 {Math.round((documents.filter(document => {
+                    const currentStatus = getDocumentStatus(selectedStudent.id, document.id, 'not-submitted');
+                    return currentStatus === 'submitted';
+                  }).length / documents.length) * 100) || 0}%</span>
+                </div>
               </div>
-              <p style={{
-                color: '#6b7280',
-                margin: 0,
-                fontSize: '0.875rem'
-              }}>
-                Gestion des documents et tâches administratives
-              </p>
             </div>
 
             {/* Contenu */}
             <div style={{ 
-              padding: '0.75rem 1.5rem',
+              padding: '0.5rem 1rem',
               overflowY: 'auto',
-              flex: 1
+              flex: 1,
+              maxHeight: 'calc(100vh - 120px)'
             }}>
-              {/* Statistiques élève */}
+              {/* Statistiques sur mobile - fixes en haut */}
               <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(4, 1fr)',
-                gap: '0.375rem',
+                display: window.innerWidth <= 768 ? 'flex' : 'none',
+                alignItems: 'center',
+                gap: '0.5rem',
+                marginBottom: '0.75rem',
+                padding: '0.5rem',
+                background: '#f8fafc',
+                borderRadius: '0.5rem',
+                fontSize: '0.75rem',
+                justifyContent: 'center'
+              }}>
+                <span style={{ color: '#3b82f6', fontWeight: 'bold' }}>📄 {documents.length}</span>
+                <span style={{ color: '#d1d5db' }}>|</span>
+                <span style={{ color: '#10b981', fontWeight: 'bold' }}>✅ {documents.filter(document => {
+                  const currentStatus = getDocumentStatus(selectedStudent.id, document.id, 'not-submitted');
+                  return currentStatus === 'submitted';
+                }).length}</span>
+                <span style={{ color: '#f59e0b', fontWeight: 'bold' }}>⏳ {documents.filter(document => {
+                  const currentStatus = getDocumentStatus(selectedStudent.id, document.id, 'not-submitted');
+                  return currentStatus === 'pending';
+                }).length}</span>
+                <span style={{ color: '#ef4444', fontWeight: 'bold' }}>❌ {documents.filter(document => {
+                  const currentStatus = getDocumentStatus(selectedStudent.id, document.id, 'not-submitted');
+                  return currentStatus === 'not-submitted';
+                }).length}</span>
+                <span style={{ color: '#d1d5db' }}>|</span>
+                <span style={{ color: '#8b5cf6', fontWeight: 'bold' }}>📊 {Math.round((documents.filter(document => {
+                  const currentStatus = getDocumentStatus(selectedStudent.id, document.id, 'not-submitted');
+                  return currentStatus === 'submitted';
+                }).length / documents.length) * 100) || 0}%</span>
+              </div>
+              
+              {/* Onglets pour mobile */}
+              <div style={{
+                display: window.innerWidth <= 768 ? 'block' : 'none',
                 marginBottom: '0.5rem'
               }}>
                 <div style={{
-                  textAlign: 'center',
-                  padding: '0.75rem',
-                  background: '#dbeafe',
-                  borderRadius: '0.5rem'
+                  display: 'flex',
+                  borderBottom: '1px solid #e5e7eb'
                 }}>
-                  <div style={{
-                    fontSize: '1rem',
-                    fontWeight: 'bold',
-                    color: '#2563eb'
-                  }}>
-                    {documents.length}
-                  </div>
-                  <div style={{
-                    fontSize: '0.875rem',
-                    color: '#1e40af'
-                  }}>
-                    Documents total
-                  </div>
-                </div>
-                <div style={{
-                  textAlign: 'center',
-                  padding: '0.75rem',
-                  background: '#dcfce7',
-                  borderRadius: '0.5rem'
-                }}>
-                  <div style={{
-                    fontSize: '1.5rem',
-                    fontWeight: 'bold',
-                    color: '#16a34a'
-                  }}>
-                    {documents.filter(document => {
-                      const currentStatus = getDocumentStatus(selectedStudent.id, document.id, 'not-submitted');
-                      return currentStatus === 'submitted';
-                    }).length}
-                  </div>
-                  <div style={{
-                    fontSize: '0.875rem',
-                    color: '#15803d'
-                  }}>
-                    Rendus
-                  </div>
-                </div>
-                <div style={{
-                  textAlign: 'center',
-                  padding: '0.75rem',
-                  background: '#fee2e2',
-                  borderRadius: '0.5rem'
-                }}>
-                  <div style={{
-                    fontSize: '1.5rem',
-                    fontWeight: 'bold',
-                    color: '#dc2626'
-                  }}>
-                    {documents.filter(document => {
-                      const currentStatus = getDocumentStatus(selectedStudent.id, document.id, 'not-submitted');
-                      return currentStatus === 'not-submitted';
-                    }).length}
-                  </div>
-                  <div style={{
-                    fontSize: '0.875rem',
-                    color: '#b91c1c'
-                  }}>
-                    Non rendus
-                  </div>
-                </div>
-                <div style={{
-                  textAlign: 'center',
-                  padding: '0.75rem',
-                  background: '#fed7aa',
-                  borderRadius: '0.5rem'
-                }}>
-                  <div style={{
-                    fontSize: '1.5rem',
-                    fontWeight: 'bold',
-                    color: '#ea580c'
-                  }}>
-                    {documents.filter(document => {
-                      const currentStatus = getDocumentStatus(selectedStudent.id, document.id, 'not-submitted');
-                      return currentStatus === 'pending';
-                    }).length}
-                  </div>
-                  <div style={{
-                    fontSize: '0.875rem',
-                    color: '#c2410c'
-                  }}>
-                    En attente
-                  </div>
+                  <button
+                    onClick={() => setActiveTab('documents')}
+                    style={{
+                      flex: 1,
+                      padding: '0.5rem',
+                      border: 'none',
+                      background: activeTab === 'documents' ? '#3b82f6' : 'transparent',
+                      color: activeTab === 'documents' ? 'white' : '#6b7280',
+                      fontSize: '0.875rem',
+                      fontWeight: '500',
+                      cursor: 'pointer',
+                      borderRadius: '0.375rem 0.375rem 0 0'
+                    }}
+                  >
+                    📄 Documents
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('tasks')}
+                    style={{
+                      flex: 1,
+                      padding: '0.5rem',
+                      border: 'none',
+                      background: activeTab === 'tasks' ? '#3b82f6' : 'transparent',
+                      color: activeTab === 'tasks' ? 'white' : '#6b7280',
+                      fontSize: '0.875rem',
+                      fontWeight: '500',
+                      cursor: 'pointer',
+                      borderRadius: '0.375rem 0.375rem 0 0'
+                    }}
+                  >
+                    📋 Tâches
+                  </button>
                 </div>
               </div>
 
-              {/* Contenu en deux colonnes */}
+              {/* Contenu adaptatif */}
               <div style={{
-                display: 'grid',
+                display: window.innerWidth > 768 ? 'grid' : 'block',
                 gridTemplateColumns: window.innerWidth > 768 ? '1fr 1fr' : '1fr',
-                gap: '0.5rem',
+                gap: '0.75rem',
                 alignItems: 'start'
               }}>
-                {/* Colonne gauche - Documents */}
-                <div>
+                {/* Documents - Toujours visible sur PC, conditionnel sur mobile */}
+                <div style={{
+                  display: window.innerWidth > 768 ? 'block' : (activeTab === 'documents' ? 'block' : 'none')
+                }}>
                   {/* Liste des documents */}
                   <div>
                 <h4 style={{
                   fontWeight: '600',
-                  marginBottom: '0.5rem',
+                  marginBottom: '0.375rem',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '0.5rem'
+                  gap: '0.5rem',
+                  fontSize: '1rem'
                 }}>
                   📄 Documents administratifs
                 </h4>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                   {documents.map((document) => {
                     const studentDoc = selectedStudent.documents?.find(
                       doc => doc.document.id === document.id
@@ -1740,64 +1905,24 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* Colonne droite - Tâches */}
-                <div>
+                {/* Tâches - Toujours visible sur PC, conditionnel sur mobile */}
+                <div style={{
+                  display: window.innerWidth > 768 ? 'block' : (activeTab === 'tasks' ? 'block' : 'none')
+                }}>
                   {/* Tâches */}
                   <div>
                 <h4 style={{
                   fontWeight: '600',
-                  marginBottom: '0.5rem',
+                  marginBottom: '0.375rem',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '0.5rem'
+                  gap: '0.5rem',
+                  fontSize: '1rem'
                 }}>
                   ✅ Tâches
                 </h4>
 
-                {/* Ajout rapide */}
-                <div style={{ display: 'flex', gap: '0.375rem', marginBottom: '0.375rem' }}>
-                  <input
-                    type="text"
-                    placeholder="Nouvelle tâche..."
-                    value={newTaskTitle}
-                    onChange={(e) => setNewTaskTitle(e.target.value)}
-                    style={{
-                      flex: 1,
-                      height: '1.75rem',
-                      padding: '0 0.5rem',
-                      border: '2px solid #d1d5db',
-                      borderRadius: '0.375rem',
-                      fontSize: '0.875rem'
-                    }}
-                  />
-                  <button
-                    onClick={async () => {
-                      if (!selectedStudent) return;
-                      if (!newTaskTitle.trim()) return;
-                      const res = await fetch('/api/tasks', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ title: newTaskTitle.trim(), studentId: selectedStudent.id })
-                      });
-                      if (res.ok) {
-                        setNewTaskTitle('');
-                        await loadTasksForStudent(selectedStudent.id);
-                      }
-                    }}
-                    style={{
-                      padding: '0.25rem 0.5rem',
-                      borderRadius: '0.375rem',
-                      border: '2px solid #3b82f6',
-                      background: '#3b82f6',
-                      color: 'white',
-                      fontSize: '0.875rem',
-                      fontWeight: '500',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    Ajouter
-                  </button>
-                </div>
+
 
                 {/* Filtres / actions tâches */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', marginBottom: '0.375rem', flexWrap: 'wrap' }}>
@@ -1811,14 +1936,7 @@ export default function Home() {
                     <option value="in_progress">En cours</option>
                     <option value="done">Fait</option>
                   </select>
-                  <select
-                    value={taskSort}
-                    onChange={(e) => setTaskSort(e.target.value as any)}
-                    style={{ height: '2rem', border: '2px solid #d1d5db', borderRadius: '0.375rem', padding: '0 0.5rem', fontSize: '0.875rem', background: 'white' }}
-                  >
-                    <option value="dueAsc">Échéance ↑</option>
-                    <option value="dueDesc">Échéance ↓</option>
-                  </select>
+
                   <button
                     onClick={async () => {
                       if (!selectedStudent) return;
@@ -1847,6 +1965,7 @@ export default function Home() {
                   >
                     Toutes faites
                   </button>
+
                 </div>
 
                 {/* Liste des tâches */}
@@ -1856,9 +1975,12 @@ export default function Home() {
                     let list = base as any[];
                     if (taskFilterStatus !== 'all') list = list.filter(t => t.status === taskFilterStatus);
                     list = list.sort((a, b) => {
-                      const ad = a.dueDate ? new Date(a.dueDate).getTime() : 0;
-                      const bd = b.dueDate ? new Date(b.dueDate).getTime() : 0;
-                      return taskSort === 'dueAsc' ? ad - bd : bd - ad;
+                      // Prioriser les tâches terminées en premier
+                      if (a.status === 'done' && b.status !== 'done') return -1;
+                      if (b.status === 'done' && a.status !== 'done') return 1;
+                      // Ensuite trier par statut : en cours, puis à faire
+                      const statusOrder = { 'in_progress': 0, 'todo': 1, 'done': 2 };
+                      return statusOrder[a.status] - statusOrder[b.status];
                     });
                     return list;
                   })().map((task) => {
@@ -2112,30 +2234,7 @@ export default function Home() {
                   </select>
                 </div>
                 
-                <div>
-                  <label style={{
-                    display: 'block',
-                    fontSize: '0.875rem',
-                    fontWeight: '500',
-                    color: '#374151',
-                    marginBottom: '0.5rem'
-                  }}>
-                    Date d'échéance
-                  </label>
-                  <input
-                    type="date"
-                    value={newTask.dueDate}
-                    onChange={(e) => setNewTask({...newTask, dueDate: e.target.value})}
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '0.375rem',
-                      fontSize: '1rem',
-                      outline: 'none'
-                    }}
-                  />
-                </div>
+
               </div>
             </div>
             
@@ -2349,6 +2448,38 @@ export default function Home() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+      
+      {/* Modal de confirmation */}
+      <ConfirmationModal
+        isOpen={confirmModal.isOpen}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        type={confirmModal.type}
+        onConfirm={confirmModal.onConfirm}
+        onCancel={() => setConfirmModal({ isOpen: false, title: '', message: '', onConfirm: () => {} })}
+      />
+      
+      {/* Notification discrète */}
+      {notification && (
+        <div
+          style={{
+            position: 'fixed',
+            top: '20px',
+            right: '20px',
+            padding: '12px 20px',
+            borderRadius: '8px',
+            color: 'white',
+            fontWeight: '500',
+            fontSize: '14px',
+            zIndex: 9999,
+            background: notification.type === 'success' ? '#10b981' : '#ef4444',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+            animation: 'slideInRight 0.3s ease-out'
+          }}
+        >
+          {notification.message}
         </div>
       )}
     </div>

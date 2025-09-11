@@ -36,7 +36,7 @@ interface TaskItem {
 }
 
 export default function OverviewDashboard() {
-  const { periods, selectedPeriod } = usePeriods();
+  const { state: { periodes, selectedPeriode } } = usePeriods();
   const [students, setStudents] = useState<Student[]>([]);
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -50,7 +50,7 @@ export default function OverviewDashboard() {
 
   useEffect(() => {
     loadDashboardData();
-  }, [selectedPeriod]);
+  }, [selectedPeriode]);
 
   const loadDashboardData = async () => {
     try {
@@ -203,13 +203,13 @@ export default function OverviewDashboard() {
         }}>
           📊 Vue d'ensemble
         </h1>
-        {selectedPeriod && (
+        {selectedPeriode && (
           <p style={{
             fontSize: '16px',
             color: '#6b7280',
             margin: 0
           }}>
-            Période active: <strong>{selectedPeriod.name}</strong>
+            Période active: <strong>{selectedPeriode.name}</strong>
           </p>
         )}
       </div>
@@ -340,13 +340,13 @@ export default function OverviewDashboard() {
             fontSize: '32px',
             fontWeight: '700',
             margin: 0
-          }}>{periods?.length || 0}</p>
+          }}>{periodes?.length || 0}</p>
           <p style={{
             fontSize: '12px',
             opacity: 0.9,
             margin: '4px 0 0 0'
           }}>
-            {selectedPeriod ? 'Active' : 'Aucune sélectionnée'}
+            {selectedPeriode ? 'Active' : 'Aucune sélectionnée'}
           </p>
         </div>
       </div>

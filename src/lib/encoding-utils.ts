@@ -7,7 +7,7 @@
  * @param {string} text - Le texte à nettoyer
  * @returns {string} - Le texte nettoyé et validé
  */
-export function sanitizeText(text) {
+export function sanitizeText(text: string) {
   if (!text || typeof text !== 'string') {
     return '';
   }
@@ -52,7 +52,7 @@ export function sanitizeText(text) {
  * @param {string} text - Le texte à valider
  * @returns {boolean} - true si le texte est valide, false sinon
  */
-export function isValidEncoding(text) {
+export function isValidEncoding(text: string) {
   if (!text || typeof text !== 'string') {
     return true;
   }
@@ -81,7 +81,7 @@ export function isValidEncoding(text) {
  * @param {Object} data - L'objet contenant les données
  * @returns {Object} - L'objet avec les chaînes nettoyées
  */
-export function sanitizeDataForDB(data) {
+export function sanitizeDataForDB(data: any) {
   if (!data || typeof data !== 'object') {
     return data;
   }
@@ -109,10 +109,10 @@ export function sanitizeDataForDB(data) {
  * @param {Object} data - Les données à valider
  * @throws {Error} - Si des problèmes d'encodage sont détectés
  */
-export function validateEncodingBeforeInsert(data) {
-  const errors = [];
+export function validateEncodingBeforeInsert(data: any) {
+  const errors: string[] = [];
   
-  function checkObject(obj, path = '') {
+  function checkObject(obj: any, path = '') {
     Object.entries(obj).forEach(([key, value]) => {
       const currentPath = path ? `${path}.${key}` : key;
       
@@ -166,7 +166,7 @@ export const commonDocumentNames = {
  * @param {string} description - Description de la tâche
  * @returns {Object} - Objet tâche avec encodage validé
  */
-export function createTaskData(name, description) {
+export function createTaskData(name: string, description: string) {
   const taskData = {
     name: sanitizeText(name),
     description: sanitizeText(description)
@@ -182,7 +182,7 @@ export function createTaskData(name, description) {
  * @param {string} description - Description du document
  * @returns {Object} - Objet document avec encodage validé
  */
-export function createDocumentData(name, description) {
+export function createDocumentData(name: string, description: string) {
   const docData = {
     name: sanitizeText(name),
     description: sanitizeText(description)

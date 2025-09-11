@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
+import { TouchInfoProvider } from '../components/TouchInfoProvider'
 
 const inter = Inter({ subsets: ['latin', 'latin-ext'] })
 
@@ -26,7 +27,11 @@ export default function RootLayout({
       <head>
         <meta charSet="utf-8" />
       </head>
-      <body className={inter.className}>{children}</body>
+      <body className={inter.className}>
+        <TouchInfoProvider>
+          {children}
+        </TouchInfoProvider>
+      </body>
     </html>
   )
 }
