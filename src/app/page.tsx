@@ -1979,8 +1979,8 @@ export default function Home() {
                       if (a.status === 'done' && b.status !== 'done') return -1;
                       if (b.status === 'done' && a.status !== 'done') return 1;
                       // Ensuite trier par statut : en cours, puis à faire
-                      const statusOrder = { 'in_progress': 0, 'todo': 1, 'done': 2 };
-                      return statusOrder[a.status] - statusOrder[b.status];
+                      const statusOrder: Record<'in_progress' | 'todo' | 'done', number> = { 'in_progress': 0, 'todo': 1, 'done': 2 };
+                      return statusOrder[a.status as keyof typeof statusOrder] - statusOrder[b.status as keyof typeof statusOrder];
                     });
                     return list;
                   })().map((task) => {
