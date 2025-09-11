@@ -348,8 +348,9 @@ export default function DocumentsManager({
                             autoFocus
                             onKeyDown={(e) => {
                               if (e.key === 'Enter') {
-                                if (editingDoc?.name?.trim() && editingDoc?.name.trim() !== doc.name) {
-                                  updateDocument(doc.id, editingDoc.name);
+                                const newName = editingDoc?.name?.trim();
+                                if (newName && newName !== doc.name) {
+                                  updateDocument(doc.id, newName);
                                 }
                                 setEditingDoc(null);
                               }
@@ -358,8 +359,9 @@ export default function DocumentsManager({
                           />
                           <button
                             onClick={() => {
-                              if (editingDoc?.name?.trim() && editingDoc.name.trim() !== doc.name) {
-                                updateDocument(doc.id, editingDoc.name);
+                              const newName = editingDoc?.name?.trim();
+                              if (newName && newName !== doc.name) {
+                                updateDocument(doc.id, newName);
                               }
                               setEditingDoc(null);
                             }}
