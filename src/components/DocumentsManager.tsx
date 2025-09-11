@@ -358,7 +358,7 @@ export default function DocumentsManager({
                           />
                           <button
                             onClick={() => {
-                              if (editingDoc.name.trim() && editingDoc.name.trim() !== doc.name) {
+                              if (editingDoc?.name?.trim() && editingDoc.name.trim() !== doc.name) {
                                 updateDocument(doc.id, editingDoc.name);
                               }
                               setEditingDoc(null);
