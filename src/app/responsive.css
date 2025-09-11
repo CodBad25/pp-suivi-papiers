@@ -6,6 +6,32 @@
   --small-mobile-breakpoint: 480px;
 }
 
+/* Force le mode clair pour éviter les problèmes de mode sombre */
+* {
+  color-scheme: light !important;
+}
+
+html, body {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+}
+
+/* Force les cartes à avoir un fond blanc */
+.student-card, [style*="background"] {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+}
+
+/* Force tous les éléments avec un fond à être en mode clair */
+[style*="backgroundColor"], [style*="background-color"] {
+  background-color: #ffffff !important;
+}
+
+/* Assure que le texte reste lisible */
+.student-name, .section-title, .stat-item {
+  color: #000000 !important;
+}
+
 /* Media queries pour mobile - Optimisé pour réduire le scroll */
 @media (max-width: 768px) {
   /* Header responsive - Compact */
