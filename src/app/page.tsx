@@ -2046,7 +2046,7 @@ export default function Home() {
                           <button
                             title="Supprimer la tâche"
                             onClick={async () => {
-                              await fetch(`/api/tasks/${task.id}`, { method: 'DELETE' });
+                              await fetch(`/api/student-tasks/${task.id}`, { method: 'DELETE' });
                               if (selectedStudent) await loadTasksForStudent(selectedStudent.id);
                             }}
                             style={{
