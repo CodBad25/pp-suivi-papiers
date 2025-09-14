@@ -66,7 +66,7 @@ export default function TasksManager({
     
     try {
       setLocalLoading(true);
-      const response = await fetch('/api/tasks', {
+      const response = await fetch('/api/task-types', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -92,7 +92,7 @@ export default function TasksManager({
     if (!newName.trim()) return;
     
     try {
-      const response = await fetch(`/api/tasks/${id}`, {
+      const response = await fetch(`/api/task-types/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: newName.trim() })
@@ -108,7 +108,7 @@ export default function TasksManager({
 
   const deleteTask = async (id: string) => {
     try {
-      const response = await fetch(`/api/tasks/${id}`, {
+      const response = await fetch(`/api/task-types/${id}`, {
         method: 'DELETE'
       });
       

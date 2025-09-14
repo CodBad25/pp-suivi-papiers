@@ -174,7 +174,7 @@ export function PeriodsProvider({ children }: PeriodsProviderProps) {
       dispatch({ type: 'SET_LOADING', payload: true });
       dispatch({ type: 'SET_ERROR', payload: null });
       
-      const response = await fetch('/api/tasks');
+      const response = await fetch('/api/task-types');
       if (!response.ok) {
         throw new Error(`Erreur HTTP: ${response.status}`);
       }
@@ -199,7 +199,7 @@ export function PeriodsProvider({ children }: PeriodsProviderProps) {
       const [periodesResult, documentsResult, tasksResult] = await Promise.allSettled([
         fetch('/api/periodes').then(r => r.ok ? r.json() : []),
         fetch('/api/documents').then(r => r.ok ? r.json() : []),
-        fetch('/api/tasks').then(r => r.ok ? r.json() : [])
+        fetch('/api/task-types').then(r => r.ok ? r.json() : [])
       ]);
       
       const periodes = periodesResult.status === 'fulfilled' ? 
