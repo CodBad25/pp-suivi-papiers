@@ -74,9 +74,6 @@ export default function Home() {
   const [newTask, setNewTask] = useState({ title: '', description: '', priority: 'medium' as 'low' | 'medium' | 'high', dueDate: '' });
   const [newDocument, setNewDocument] = useState({ name: '', description: '', dueDate: '' });
   const [showRemarks, setShowRemarks] = useState<{[key: string]: boolean}>({});
-  const [editingRemarks, setEditingRemarks] = useState<{[key: string]: string}>({});
-  const [showTaskRemarks, setShowTaskRemarks] = useState<{[key: string]: boolean}>({});
-  const [editingTaskRemarks, setEditingTaskRemarks] = useState<{[key: string]: string}>({});
   const [activeTab, setActiveTab] = useState<'documents' | 'tasks'>('documents');
   const [notification, setNotification] = useState<{message: string, type: 'success' | 'error'} | null>(null);
 
@@ -371,78 +368,6 @@ export default function Home() {
     } catch (error) {
       console.error('Erreur lors de la mise à jour des remarques:', error);
     }
-  };
-
-  // Fonction de debounce
-  const debounce = (func: Function, wait: number) => {
-    let timeout: NodeJS.Timeout;
-    return function executedFunction(...args: any[]) {
-      const later = () => {
-        clearTimeout(timeout);
-        func(...args);
-      };
-      clearTimeout(timeout);
-      timeout = setTimeout(later, wait);
-    };
-  };
-
-  // Fonction debounced pour les remarques
-  const debouncedUpdateRemarks = debounce((studentId: string, documentId: string, remarks: string) => {
-    updateDocumentRemarks(studentId, documentId, remarks);
-  }, 1000);
-
-  // Fonction pour gérer le changement des remarques
-  const handleRemarksChange = (studentId: string, documentId: string, newRemarks: string) => {
-    const key = `${studentId}-${documentId}`;
-    setEditingRemarks(prev => ({
-      ...prev,
-      [key]: newRemarks
-    }));
-    debouncedUpdateRemarks(studentId, documentId, newRemarks);
-  };
-
-  // Fonction pour mettre à jour les remarques des tâches
-  const updateTaskRemarks = async (studentId: string, taskId: string, remarks: string) => {
-    try {
-      const response = await fetch(`/api/student-tasks/${taskId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ remarks }),
-      });
-
-      if (response.ok) {
-        // Mise à jour locale des données
-        setTasksByStudent(prevTasks => ({
-          ...prevTasks,
-          [studentId]: (prevTasks[studentId] || []).map(task => {
-            if (task.id === taskId) {
-              return { ...task, remarks };
-            }
-            return task;
-          })
-        }));
-        console.log("Remarques de tâche mises à jour");
-      } else {
-        console.log("Erreur lors de la mise à jour des remarques de tâche");
-      }
-    } catch (error) {
-      console.error('Erreur lors de la mise à jour des remarques de tâche:', error);
-    }
-  };
-
-  // Fonction debounced pour les remarques de tâches
-  const debouncedUpdateTaskRemarks = debounce((studentId: string, taskId: string, remarks: string) => {
-    updateTaskRemarks(studentId, taskId, remarks);
-  }, 1000);
-
-  // Fonction pour gérer le changement des remarques de tâches
-  const handleTaskRemarksChange = (studentId: string, taskId: string, newRemarks: string) => {
-    const key = `${studentId}-${taskId}`;
-    setEditingTaskRemarks(prev => ({
-      ...prev,
-      [key]: newRemarks
-    }));
-    debouncedUpdateTaskRemarks(studentId, taskId, newRemarks);
   };
 
   const cycleDocumentStatus = (currentStatus: string) => {
@@ -1932,20 +1857,10 @@ export default function Home() {
                             className="remarks-btn"
                             onClick={() => {
                               const remarksKey = `${selectedStudent.id}-${document.id}`;
-                              const isOpening = !showRemarks[remarksKey];
-                              
                               setShowRemarks(prev => ({
                                 ...prev,
                                 [remarksKey]: !prev[remarksKey]
                               }));
-                              
-                              // Initialiser l'état local avec la valeur actuelle quand on ouvre
-                              if (isOpening && !editingRemarks[remarksKey]) {
-                                setEditingRemarks(prev => ({
-                                  ...prev,
-                                  [remarksKey]: studentDoc?.remarks || ''
-                                }));
-                              }
                             }}
                             style={{
                               opacity: '0',
@@ -1964,10 +1879,10 @@ export default function Home() {
                           {showRemarks[`${selectedStudent.id}-${document.id}`] && (
                             <textarea
                               placeholder="Ajouter des remarques..."
-                              value={editingRemarks[`${selectedStudent.id}-${document.id}`] ?? studentDoc?.remarks || ''}
+                              value={studentDoc?.remarks || ''}
                               onChange={(e) => {
                                 const newRemarks = e.target.value;
-                                handleRemarksChange(selectedStudent.id, document.id, newRemarks);
+                                updateDocumentRemarks(selectedStudent.id, document.id, newRemarks);
                               }}
                               style={{
                                 width: '100%',
@@ -2076,168 +1991,80 @@ export default function Home() {
 
                     return (
                       <div key={task.id} style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
                         padding: '0.5rem',
                         borderRadius: '0.5rem',
                         border: `2px solid ${statusColor(task.status as any)}`,
                         background: statusBg(task.status as any)
                       }}>
-                        <div style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between'
-                        }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <div style={{ width: 10, height: 10, borderRadius: '50%', background: statusColor(task.status as any) }} />
-                            <div style={{ fontWeight: 500 }}>{(task as any).taskType?.name || (task as any).title}</div>
-                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem', color: '#6b7280' }}>
-                              <input
-                                type="checkbox"
-                                checked={(task as any).exempted || false}
-                                onChange={async (e) => {
-                                  await fetch(`/api/student-tasks/${(task as any).id}` , {
-                                    method: 'PATCH',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ exempted: e.target.checked })
-                                  });
-                                  if (selectedStudent) await loadTasksForStudent(selectedStudent.id);
-                                }}
-                              />
-                              Dispensé
-                            </label>
-                          </div>
-                          <div style={{ display: 'flex', gap: '0.5rem' }}>
-                            <button
-                              title="Changer le statut"
-                              onClick={async () => {
-                                const ns = nextStatus(task.status as any);
-                                await fetch(`/api/student-tasks/${task.id}`, {
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <div style={{ width: 10, height: 10, borderRadius: '50%', background: statusColor(task.status as any) }} />
+                          <div style={{ fontWeight: 500 }}>{(task as any).taskType?.name || (task as any).title}</div>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem', color: '#6b7280' }}>
+                            <input
+                              type="checkbox"
+                              checked={(task as any).exempted || false}
+                              onChange={async (e) => {
+                                await fetch(`/api/student-tasks/${(task as any).id}` , {
                                   method: 'PATCH',
                                   headers: { 'Content-Type': 'application/json' },
-                                  body: JSON.stringify({ status: ns })
+                                  body: JSON.stringify({ exempted: e.target.checked })
                                 });
                                 if (selectedStudent) await loadTasksForStudent(selectedStudent.id);
                               }}
-                              style={{
-                                padding: '0.25rem 0.5rem',
-                                borderRadius: '0.375rem',
-                                border: `2px solid ${statusColor(task.status as any)}`,
-                                background: 'white',
-                                color: statusColor(task.status as any),
-                                fontSize: '0.75rem',
-                                fontWeight: 500,
-                                cursor: 'pointer'
-                              }}
-                            >
-                              {statusLabel(task.status as any)}
-                            </button>
-                            <button
-                              title="Supprimer la tâche"
-                              onClick={async () => {
-                                await fetch(`/api/student-tasks/${task.id}`, { method: 'DELETE' });
-                                if (selectedStudent) await loadTasksForStudent(selectedStudent.id);
-                              }}
-                              style={{
-                                padding: '0.25rem 0.5rem',
-                                borderRadius: '0.375rem',
-                                border: '2px solid #ef4444',
-                                background: 'white',
-                                color: '#ef4444',
-                                fontSize: '0.75rem',
-                                fontWeight: 500,
-                                cursor: 'pointer'
-                              }}
+                            />
+                            Dispensé
+                          </label>
+                        </div>
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                          <button
+                            title="Changer le statut"
+                            onClick={async () => {
+                              const ns = nextStatus(task.status as any);
+                              await fetch(`/api/student-tasks/${task.id}`, {
+                                method: 'PATCH',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ status: ns })
+                              });
+                              if (selectedStudent) await loadTasksForStudent(selectedStudent.id);
+                            }}
+                            style={{
+                              padding: '0.25rem 0.5rem',
+                              borderRadius: '0.375rem',
+                              border: `2px solid ${statusColor(task.status as any)}`,
+                              background: 'white',
+                              color: statusColor(task.status as any),
+                              fontSize: '0.75rem',
+                              fontWeight: 500,
+                              cursor: 'pointer'
+                            }}
                           >
-                             Supprimer
-                           </button>
-                         </div>
-                       </div>
-                       
-                       {/* Affichage des remarques existantes */}
-                       {(task as any).remarks && (
-                         <div style={{
-                           marginTop: '0.5rem',
-                           padding: '0.375rem 0.5rem',
-                           background: '#fef3c7',
-                           border: '1px solid #fbbf24',
-                           borderRadius: '0.25rem',
-                           fontSize: '0.75rem'
-                         }}>
-                           <strong>💬</strong> {(task as any).remarks}
-                         </div>
-                       )}
-                       
-                       {/* Bouton remarques au survol */}
-                       <div 
-                         style={{
-                           position: 'relative',
-                           marginTop: '0.25rem'
-                         }}
-                         onMouseEnter={(e) => {
-                           const btn = e.currentTarget.querySelector('.task-remarks-btn') as HTMLElement;
-                           if (btn) btn.style.opacity = '1';
-                         }}
-                         onMouseLeave={(e) => {
-                           const btn = e.currentTarget.querySelector('.task-remarks-btn') as HTMLElement;
-                           if (btn) btn.style.opacity = '0';
-                         }}
-                       >
-                         <button
-                           className="task-remarks-btn"
-                           onClick={() => {
-                             const remarksKey = `${selectedStudent.id}-${task.id}`;
-                             const isOpening = !showTaskRemarks[remarksKey];
-                             
-                             setShowTaskRemarks(prev => ({
-                               ...prev,
-                               [remarksKey]: !prev[remarksKey]
-                             }));
-                             
-                             // Initialiser l'état local avec la valeur actuelle quand on ouvre
-                             if (isOpening && !editingTaskRemarks[remarksKey]) {
-                               setEditingTaskRemarks(prev => ({
-                                 ...prev,
-                                 [remarksKey]: (task as any).remarks || ''
-                               }));
-                             }
-                           }}
-                           style={{
-                             opacity: '0',
-                             transition: 'opacity 0.2s ease',
-                             padding: '0.25rem 0.5rem',
-                             fontSize: '0.75rem',
-                             background: '#f3f4f6',
-                             border: '1px solid #d1d5db',
-                             borderRadius: '0.25rem',
-                             cursor: 'pointer',
-                             color: '#6b7280'
-                           }}
-                         >
-                           💬 Remarques
-                         </button>
-                         {showTaskRemarks[`${selectedStudent.id}-${task.id}`] && (
-                           <textarea
-                             placeholder="Ajouter des remarques..."
-                             value={editingTaskRemarks[`${selectedStudent.id}-${task.id}`] ?? (task as any).remarks || ''}
-                             onChange={(e) => {
-                               const newRemarks = e.target.value;
-                               handleTaskRemarksChange(selectedStudent.id, task.id, newRemarks);
-                             }}
-                             style={{
-                               width: '100%',
-                               minHeight: '40px',
-                               padding: '0.375rem',
-                               border: '1px solid #d1d5db',
-                               borderRadius: '0.25rem',
-                               fontSize: '0.75rem',
-                               resize: 'vertical',
-                               fontFamily: 'inherit',
-                               marginTop: '0.25rem'
-                             }}
-                           />
-                         )}
-                       </div>
-                     </div>
-                   );
+                            {statusLabel(task.status as any)}
+                          </button>
+                          <button
+                            title="Supprimer la tâche"
+                            onClick={async () => {
+                              await fetch(`/api/student-tasks/${task.id}`, { method: 'DELETE' });
+                              if (selectedStudent) await loadTasksForStudent(selectedStudent.id);
+                            }}
+                            style={{
+                              padding: '0.25rem 0.5rem',
+                              borderRadius: '0.375rem',
+                              border: '2px solid #ef4444',
+                              background: 'white',
+                              color: '#ef4444',
+                              fontSize: '0.75rem',
+                              fontWeight: 500,
+                              cursor: 'pointer'
+                            }}
+                          >
+                            Supprimer
+                          </button>
+                        </div>
+                      </div>
+                    );
                   })}
                   {selectedStudent && (!tasksByStudent[selectedStudent.id] || tasksByStudent[selectedStudent.id].length === 0) && (
                     <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>Aucune tâche pour cet élève.</div>

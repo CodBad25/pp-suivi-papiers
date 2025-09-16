@@ -13,21 +13,20 @@ async function getPrisma() {
 }
 
 // PATCH /api/student-tasks/[id]
-// Body can include: { status?: 'todo'|'in_progress'|'done', exempted?: boolean, dueDate?: string|null, remarks?: string }
+// Body can include: { status?: 'todo'|'in_progress'|'done', exempted?: boolean, dueDate?: string|null }
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   try {
     const prisma = await getPrisma();
     if (!prisma) return NextResponse.json({ error: 'Base de données indisponible' }, { status: 503 });
     const body = await req.json();
-    const { status, exempted, dueDate, remarks } = body || {};
+    const { status, exempted, dueDate } = body || {};
     const updated = await prisma.studentTask.update({
       where: { id },
       data: {
         status,
         exempted,
         dueDate: typeof dueDate !== 'undefined' ? (dueDate ? new Date(dueDate) : null) : undefined,
-        remarks: typeof remarks !== 'undefined' ? remarks : undefined,
       },
       include: { taskType: true }
     });
